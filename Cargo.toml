@@ -1,0 +1,15 @@
+[package]
+name = "chaos-ntp"
+version = "0.1.0"
+authors = ["plates"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nom = "6.0.1"
+byteorder = "1.3.4"
+num_enum = "0.5.1"
+simple-error = "0.2.2"
+rand = "0.7.3"
+
