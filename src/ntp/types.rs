@@ -139,9 +139,6 @@ pub struct Timestamp(pub u64);
 #[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Add,Mul,Deref,DerefMut,From,Into,Copy)]
 pub struct Short(pub u32);
 
-//newtype_ops! { [Timestamp] integer {:=} {&}Self {&}{Self u64} }
-//newtype_ops! { [Short] integer {:=} {&}Self {&}{Self u32} }
-
 pub trait TimestampTrait<T, H> {
     fn get_seconds(self) -> H;
     fn get_fraction(self) -> H;
@@ -160,43 +157,6 @@ macro_rules! gen_timestamp_trait {
                 | $size::from((self.get_fraction()))).into() }
             fn set_fraction(self, fraction: $halfsize) -> Self { ($size::from(self) | (fraction as $size)).into() }
         }
-
-        //impl From<$size> for $name {
-        //    fn from(item: $size) -> Self { Self(item) }
-        //}
-
-        ////i thought that into was supposed to implement itself but if you comment that out you will
-        ////get an error in the parser
-        ////notice how im calling into in the the implementation of into why does this work
-        //impl Into<$size> for $name {
-        //    fn into(self) -> $size { self.into() }
-        //}
-    }
-}
-
-//macro_rules! gen_deref_for_newtype {
-//    ($name:ident, $type:ident) => {
-//        impl core::ops::Deref for $name {
-//            type Target = $type;
-//            fn deref(&self) -> &Self::Target {
-//                &self.0
-//            }
-//        }
-//
-//        impl core::ops::DerefMut for $name {
-//            fn deref_mut(&mut self) -> &mut Self::Target {
-//                &mut self.0
-//            }
-//        }
-//    }
-//}
-
-//gen_deref_for_newtype!(Timestamp, u64);
-//gen_deref_for_newtype!(Short, u32);
-
-impl fmt::Display for Timestamp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "timestamp {}", self)
     }
 }
 
