@@ -1,7 +1,9 @@
-use std::convert::{TryFrom,TryInto};
+use std::convert::{TryFrom,TryInto,From,Into};
+use std::fmt;
 use std::mem::size_of;
 use simple_error::SimpleError;
 use num_enum::{IntoPrimitive,TryFromPrimitive};
+use derive_more::{Add,Mul,From,Into,Deref,DerefMut};
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum KoD {
@@ -127,13 +129,18 @@ pub struct Date {
 //what even is this
 //do i need this
 //rfc mentions 128bit timestamp a couple of times but it doesn't seem to be used in the packet...
+//update: so apparently while this is not used in the packet, it can be used in the server/client
+//still not sure why, how am i supposed to know from which era did the packet come from, should i
+//just assume that it came from my era?
 
-pub type Timestamp = u64;
+#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Add,Mul,Deref,DerefMut,From,Into,Copy)]
+pub struct Timestamp(pub u64);
 
-pub type Short = u32;
-//    seconds: u16,
-//    fraction: u16,
-//}
+#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Add,Mul,Deref,DerefMut,From,Into,Copy)]
+pub struct Short(pub u32);
+
+//newtype_ops! { [Timestamp] integer {:=} {&}Self {&}{Self u64} }
+//newtype_ops! { [Short] integer {:=} {&}Self {&}{Self u32} }
 
 pub trait TimestampTrait<T, H> {
     fn get_seconds(self) -> H;
@@ -142,16 +149,54 @@ pub trait TimestampTrait<T, H> {
     fn set_fraction(self, fraction: H) -> T;
 }
 
-//this is probably broken 
+//this probably is broken 
+//update: even more broken now
 macro_rules! gen_timestamp_trait {
     ($name:ident, $size:ident, $halfsize:ident) => {
         impl TimestampTrait<$name, $halfsize> for $name {
-            fn get_seconds(self) -> $halfsize { (self >> (size_of::<$halfsize>()*8)) as $halfsize }
-            fn get_fraction(self) -> $halfsize { self as $halfsize }
-            fn set_seconds(self, seconds: $halfsize) -> Self { ((seconds as $size) << (size_of::<$halfsize>()*8)) 
-                | (self.get_fraction() as $size) }
-            fn set_fraction(self, fraction: $halfsize) -> Self { self | (fraction as $size) }
+            fn get_seconds(self) -> $halfsize { ($size::from(self) >> ((size_of::<$halfsize>() as $size)*8)) as $halfsize }
+            fn get_fraction(self) -> $halfsize { $size::from(self) as $halfsize }
+            fn set_seconds(self, seconds: $halfsize) -> Self { (((seconds as $size) << (size_of::<$halfsize>()*8)) 
+                | $size::from((self.get_fraction()))).into() }
+            fn set_fraction(self, fraction: $halfsize) -> Self { ($size::from(self) | (fraction as $size)).into() }
         }
+
+        //impl From<$size> for $name {
+        //    fn from(item: $size) -> Self { Self(item) }
+        //}
+
+        ////i thought that into was supposed to implement itself but if you comment that out you will
+        ////get an error in the parser
+        ////notice how im calling into in the the implementation of into why does this work
+        //impl Into<$size> for $name {
+        //    fn into(self) -> $size { self.into() }
+        //}
+    }
+}
+
+//macro_rules! gen_deref_for_newtype {
+//    ($name:ident, $type:ident) => {
+//        impl core::ops::Deref for $name {
+//            type Target = $type;
+//            fn deref(&self) -> &Self::Target {
+//                &self.0
+//            }
+//        }
+//
+//        impl core::ops::DerefMut for $name {
+//            fn deref_mut(&mut self) -> &mut Self::Target {
+//                &mut self.0
+//            }
+//        }
+//    }
+//}
+
+//gen_deref_for_newtype!(Timestamp, u64);
+//gen_deref_for_newtype!(Short, u32);
+
+impl fmt::Display for Timestamp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "timestamp {}", self)
     }
 }
 
@@ -186,8 +231,10 @@ pub struct Packet {
 //big endian
 
 impl Packet {
+    pub const BASE_SIZE: usize = 48;
+
     pub fn size(&self) -> usize {
-        let mut size = 48; 
+        let mut size = Self::BASE_SIZE; 
         if let Some(_) = self.auth {
             size += 20;
         }

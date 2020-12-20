@@ -16,7 +16,7 @@ fn parse_header(input: (&[u8], usize)) -> IResult<(&[u8], usize), (u8, u8, u8)> 
     )(input)
 }
 
-fn parse_metadata(input: &[u8]) -> IResult<&[u8], (u8, i8, i8, Short, Short, &[u8])> {
+fn parse_metadata(input: &[u8]) -> IResult<&[u8], (u8, i8, i8, u32, u32, &[u8])> {
     nom::error::context(
         "ntp_metadata",
         nom::sequence::tuple((
@@ -30,7 +30,7 @@ fn parse_metadata(input: &[u8]) -> IResult<&[u8], (u8, i8, i8, Short, Short, &[u
     )(input)
 }
 
-fn parse_timedata(input: &[u8]) -> IResult<&[u8], (Timestamp, Timestamp, Timestamp, Timestamp)> {
+fn parse_timedata(input: &[u8]) -> IResult<&[u8], (u64, u64, u64, u64)> {
     nom::error::context(
         "ntp_timedata",
         nom::sequence::tuple((
@@ -83,11 +83,15 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     mode: Mode::try_from(mode).map_err(|_| "invalid mode")?,
 
                     stratum: stratum.try_into()?,
-                    poll, precision, root_delay, root_dispersion,
+                    poll, precision, 
+                    root_delay: root_delay.into(), 
+                    root_dispersion: root_dispersion.into(),
                     reference_id: reference_id[0..4].try_into().map_err(|_| "invlaid reference_id")?,
 
-                    reference_timestamp, origin_timestamp, 
-                    receive_timestamp, transit_timestamp,
+                    reference_timestamp: reference_timestamp.into(), 
+                    origin_timestamp: origin_timestamp.into(), 
+                    receive_timestamp: receive_timestamp.into(), 
+                    transit_timestamp: transit_timestamp.into(),
 
                     auth,
                 })
@@ -106,13 +110,13 @@ pub fn serialize_packet(packet: &Packet) -> Result<Vec<u8>, Box<dyn std::error::
     data.write_u8(packet.stratum.try_into()?)?;
     data.write_i8(packet.poll)?;
     data.write_i8(packet.precision)?;
-    data.write_u32::<BigEndian>(packet.root_delay)?;
-    data.write_u32::<BigEndian>(packet.root_dispersion)?;
+    data.write_u32::<BigEndian>(packet.root_delay.into())?;
+    data.write_u32::<BigEndian>(packet.root_dispersion.into())?;
     for n in &packet.reference_id { data.write_u8(*n)?; }
-    data.write_u64::<BigEndian>(packet.reference_timestamp)?;
-    data.write_u64::<BigEndian>(packet.origin_timestamp)?;
-    data.write_u64::<BigEndian>(packet.receive_timestamp)?;
-    data.write_u64::<BigEndian>(packet.transit_timestamp)?;
+    data.write_u64::<BigEndian>(packet.reference_timestamp.into())?;
+    data.write_u64::<BigEndian>(packet.origin_timestamp.into())?;
+    data.write_u64::<BigEndian>(packet.receive_timestamp.into())?;
+    data.write_u64::<BigEndian>(packet.transit_timestamp.into())?;
 
     //TODO: EXTENSIONS!!!
     
