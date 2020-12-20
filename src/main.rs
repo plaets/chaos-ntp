@@ -78,7 +78,6 @@ fn main() -> std::io::Result<()> {
         match socket.recv_from(&mut buf) {
             Ok((amt, addr)) => {
                 println!("{:}, {}", addr, amt);
-                println!("{:x?}", &buf[0..amt]);
                 //turns out ntp packets shorter than 48 bytes also valid? idk anymore
                 //im just going to assume that if the packet is shorter than the usual size the
                 //rest is filled with zeros
@@ -86,19 +85,19 @@ fn main() -> std::io::Result<()> {
                                                    else { ntp::types::Packet::BASE_SIZE })]) 
                     .and_then(|packet| {
                         let packet = packet.1.unwrap();
-                        println!("{:?}", &packet);
+                        println!("{:?} {:?}", &packet, &packet.reference_timestamp);
+                        let tt = packet.transit_timestamp;
                         let new_packet = server.process_packet(packet);
-                        println!("responding with: {:?}", &new_packet);
+                        println!("responding with: {:?} {:x} {:x} {:x}", &new_packet, tt.get_seconds()-&new_packet.transit_timestamp.get_seconds(), tt, &new_packet.transit_timestamp);
                         let serialized = ntp::parser::serialize_packet(&new_packet);
                         if let Ok(buf) = serialized {
-                            println!("{:?}", &buf);
                             socket.send_to(&buf, addr).unwrap();
                         } else {
-                            println!("serializing error: {:?}", serialized.err());
+                            println!("serializing error: {:?} {:?}", serialized.err(), &buf);
                         }
                         Ok(())
                     })
-                    .map_err(|err| println!("parsing error: {}", err)).ok();
+                    .map_err(|err| println!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
             },
             Err(err) => {
                 eprintln!("Error: {}", err);

@@ -1,53 +1,69 @@
 use std::convert::{TryFrom,TryInto,From,Into};
-use std::fmt;
 use std::mem::size_of;
 use simple_error::SimpleError;
 use num_enum::{IntoPrimitive,TryFromPrimitive};
-use derive_more::{Add,Mul,From,Into,Deref,DerefMut};
+use derive_more::{Add,Mul,From,Into,Deref,DerefMut,LowerHex};
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum KoD {
-    ACST,
-    AUTH,
-    AUTO,
-    BCST,
-    CRYP,
-    DENY,
-    DROP,
-    RSTR,
-    INIT,
-    MCST,
-    NKEY,
-    RATE,
-    RMOT,
-    STEP,
+    ACST,   //the associtaion belongs to a unicast server
+    AUTH,   //server authentication failed
+    AUTO,   //autokey sequence failed
+    BCST,   //the association belongs to a broadcast server
+    CRYP,   //cyrptographic authentication or identification failed
+    DENY,   //access denied by remote server
+    DROP,   //lost peer in symmetric mode
+    RSTR,   //access denied due to local policy
+    INIT,   //the association has not yet synchronized for the first time
+    MCST,   //the association belongs to a dynamically discovered server
+    NKEY,   //no key found. either the key was never installed or is not trusted
+    RATE,   //rate exceeded, access denied temporarily
+    RMOT,   //alteration of associations from a remote host running ntpdc
+    STEP,   //a step change in system time has occured, but the association has not yet resynchronized
     Unknown([u8;4]),
-}
-
-macro_rules! into_array {
-    ($x:expr, $len:expr) => {
-        { $x.as_bytes()[..($len)].try_into().unwrap() }
-    }
 }
 
 impl Into<[u8;4]> for KoD {
     fn into(self) -> [u8;4] {
         match self {
-            Self::ACST => into_array!("ACST", 4),
-            Self::AUTH => into_array!("AUTH", 4),
-            Self::AUTO => into_array!("AUTO", 4),
-            Self::BCST => into_array!("BCST", 4),
-            Self::CRYP => into_array!("CRYP", 4),
-            Self::DENY => into_array!("DENY", 4),
-            Self::DROP => into_array!("DROP", 4),
-            Self::RSTR => into_array!("RSTR", 4),
-            Self::INIT => into_array!("INIT", 4),
-            Self::MCST => into_array!("MCST", 4),
-            Self::NKEY => into_array!("NKEY", 4),
-            Self::RATE => into_array!("RATE", 4),
-            Self::RMOT => into_array!("RMOT", 4),
-            Self::STEP => into_array!("STEP", 4),
+            Self::ACST => *b"ACST",
+            Self::AUTH => *b"AUTH",
+            Self::AUTO => *b"AUTO",
+            Self::BCST => *b"BCST",
+            Self::CRYP => *b"CRYP",
+            Self::DENY => *b"DENY",
+            Self::DROP => *b"DROP",
+            Self::RSTR => *b"RSTR",
+            Self::INIT => *b"INIT",
+            Self::MCST => *b"MCST",
+            Self::NKEY => *b"NKEY",
+            Self::RATE => *b"RATE",
+            Self::RMOT => *b"RMOT",
+            Self::STEP => *b"STEP",
             Self::Unknown(data) => data
+        }
+    }
+}
+
+//this was never tested so far and probably is not very ergonomic
+impl From<&[u8;4]> for KoD {
+    fn from(data: &[u8;4]) -> KoD {
+        match data {
+            b"ACST" => Self::ACST,
+            b"AUTH" => Self::AUTH,
+            b"AUTO" => Self::AUTO,
+            b"BCST" => Self::BCST,
+            b"CRYP" => Self::CRYP,
+            b"DENY" => Self::DENY,
+            b"DROP" => Self::DROP,
+            b"RSTR" => Self::RSTR,
+            b"INIT" => Self::INIT,
+            b"MCST" => Self::MCST,
+            b"NKEY" => Self::NKEY,
+            b"RATE" => Self::RATE,
+            b"RMOT" => Self::RMOT,
+            b"STEP" => Self::STEP,
+            _ => Self::Unknown(data.clone())
         }
     }
 }
@@ -133,10 +149,10 @@ pub struct Date {
 //still not sure why, how am i supposed to know from which era did the packet come from, should i
 //just assume that it came from my era?
 
-#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Add,Mul,Deref,DerefMut,From,Into,Copy)]
+#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Copy,Add,Mul,Deref,DerefMut,From,Into,LowerHex)]
 pub struct Timestamp(pub u64);
 
-#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Add,Mul,Deref,DerefMut,From,Into,Copy)]
+#[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Copy,Add,Mul,Deref,DerefMut,From,Into,LowerHex)]
 pub struct Short(pub u32);
 
 pub trait TimestampTrait<T, H> {
@@ -151,7 +167,7 @@ pub trait TimestampTrait<T, H> {
 macro_rules! gen_timestamp_trait {
     ($name:ident, $size:ident, $halfsize:ident) => {
         impl TimestampTrait<$name, $halfsize> for $name {
-            fn get_seconds(self) -> $halfsize { ($size::from(self) >> ((size_of::<$halfsize>() as $size)*8)) as $halfsize }
+            fn get_seconds(self) -> $halfsize { ($size::from(self) >> ((size_of::<$halfsize>() as $halfsize)*8)) as $halfsize }
             fn get_fraction(self) -> $halfsize { $size::from(self) as $halfsize }
             fn set_seconds(self, seconds: $halfsize) -> Self { (((seconds as $size) << (size_of::<$halfsize>()*8)) 
                 | $size::from((self.get_fraction()))).into() }
