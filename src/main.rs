@@ -71,7 +71,7 @@ fn main() -> std::io::Result<()> {
     let socket = UdpSocket::bind(ip + ":" + &port.to_string())?;
 
     let mut server = Server::new();
-    let mut buf = [0;65527];
+    let mut buf = [0;65527]; //i think that not zeroing out the bufer with every packet should not be a problem as long as the amt always matches the number of bytes written to the buffer... i hope thats true but i dont care enough to check right now
 
     println!("started");
 
@@ -101,7 +101,7 @@ fn main() -> std::io::Result<()> {
                     .map_err(|err| println!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
             },
             Err(err) => {
-                eprintln!("Error: {}", err);
+                eprintln!("error while receiving data: {}", err);
             }
         }
     }

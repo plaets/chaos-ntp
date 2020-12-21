@@ -65,6 +65,11 @@ fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     Ok((input, Extension { field_type, value: Box::new(bytes.to_vec()) }))
 }
 
+//at this point i just stopped caring about that nom syntax sugar
+//i have no idea how to implement this the correct:tm: way
+//i think i its still missing some error handling, what if the extension field has incorrect length
+//and we accidentally consume some bytes from the auth fields
+//i think this case is not handled at all yet, i need to start writing tests
 fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
     let mut res: Vec<Extension> = Vec::new();
     let mut i = input;
