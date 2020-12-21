@@ -156,6 +156,8 @@ pub struct Timestamp(pub u64);
 pub struct Short(pub u32);
 
 pub trait TimestampTrait<T, H> {
+    type HalfSize;
+
     fn get_seconds(self) -> H;
     fn get_fraction(self) -> H;
     fn set_seconds(self, seconds: H) -> T;
@@ -167,11 +169,15 @@ pub trait TimestampTrait<T, H> {
 macro_rules! gen_timestamp_trait {
     ($name:ident, $size:ident, $halfsize:ident) => {
         impl TimestampTrait<$name, $halfsize> for $name {
+            type HalfSize = $halfsize;
+
             fn get_seconds(self) -> $halfsize { ($size::from(self) >> ((size_of::<$halfsize>() as $halfsize)*8)) as $halfsize }
             fn get_fraction(self) -> $halfsize { $size::from(self) as $halfsize }
             fn set_seconds(self, seconds: $halfsize) -> Self { (((seconds as $size) << (size_of::<$halfsize>()*8)) 
                 | $size::from((self.get_fraction()))).into() }
-            fn set_fraction(self, fraction: $halfsize) -> Self { ($size::from(self) | (fraction as $size)).into() }
+            fn set_fraction(self, fraction: $halfsize) -> Self { 
+                ($size::from(self) & (((1 << size_of::<$halfsize>()*8)-1) << size_of::<$halfsize>()*8) 
+                 | (fraction as $size)).into() }
         }
     }
 }
