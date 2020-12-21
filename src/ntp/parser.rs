@@ -1,4 +1,5 @@
 use std::convert::{TryFrom,TryInto};
+use std::io::Write;
 use nom::{IResult,Into};
 use nom;
 use byteorder::{BigEndian, WriteBytesExt};
@@ -62,7 +63,7 @@ fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
     let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
     let (input, bytes) = nom::bytes::complete::take::<usize,_,_>(length.into())(input)?;
-    Ok((input, Extension { field_type, value: Box::new(bytes.to_vec()) }))
+    Ok((input, Extension { field_type, value: bytes.to_vec() }))
 }
 
 //at this point i just stopped caring about that nom syntax sugar
@@ -153,7 +154,13 @@ pub fn serialize_packet(packet: &Packet) -> Result<Vec<u8>, Box<dyn std::error::
     data.write_u64::<BigEndian>(packet.receive_timestamp.into())?;
     data.write_u64::<BigEndian>(packet.transit_timestamp.into())?;
 
-    //TODO: EXTENSIONS!!!
+    if let Some(extensions) = &packet.extensions {
+        for n in extensions {
+            data.write_u16::<BigEndian>(n.field_type)?;
+            data.write_u16::<BigEndian>(n.value.len() as u16)?;
+            data.write_all(&n.value)?;
+        }
+    }
     
     if let Some(auth) = &packet.auth { 
         data.write_u32::<BigEndian>(auth.key_indentifier)?;

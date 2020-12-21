@@ -189,7 +189,7 @@ gen_timestamp_trait!(Short, u32, u16);
 pub struct Extension {
     pub field_type: u16,
     //pub length: u16,
-    pub value: Box<Vec<u8>>,
+    pub value: Vec<u8>,
 }
 
 #[derive(Debug,Clone)]
@@ -215,13 +215,19 @@ pub struct Packet {
 impl Packet {
     pub const BASE_SIZE: usize = 48;
     pub const AUTH_SIZE: usize = 20;
+    pub const EXT_HEAD_SIZE: usize = 4;
 
     pub fn size(&self) -> usize {
         let mut size = Self::BASE_SIZE; 
         if let Some(_) = self.auth {
             size += Self::AUTH_SIZE;
         }
-        //TODO: EXTENSIONS!!!
+        if let Some(extensions) = &self.extensions {
+            for n in extensions {
+                size += Self::EXT_HEAD_SIZE;
+                size += n.value.len();
+            }
+        }
         size
     }
 }
