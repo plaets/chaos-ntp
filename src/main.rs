@@ -58,6 +58,7 @@ impl Server {
             reference_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction), //last set
             receive_timestamp: rand_time.set_fraction(fraction),
             transit_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction),
+            extensions: None,
             auth: None,
         }
     }
@@ -88,7 +89,7 @@ fn main() -> std::io::Result<()> {
                         println!("{:?} {:?}", &packet, &packet.reference_timestamp);
                         let tt = packet.transit_timestamp;
                         let new_packet = server.process_packet(packet);
-                        println!("responding with: {:?} {:x} {:x} {:x}", &new_packet, tt.get_seconds()-&new_packet.transit_timestamp.get_seconds(), tt, &new_packet.transit_timestamp);
+                        println!("responding with: {:?} {:x} {:x}", &new_packet, tt, &new_packet.transit_timestamp);
                         let serialized = ntp::parser::serialize_packet(&new_packet);
                         if let Ok(buf) = serialized {
                             socket.send_to(&buf, addr).unwrap();

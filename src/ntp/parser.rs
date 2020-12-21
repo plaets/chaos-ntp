@@ -1,5 +1,5 @@
 use std::convert::{TryFrom,TryInto};
-use nom::IResult;
+use nom::{IResult,Into};
 use nom;
 use byteorder::{BigEndian, WriteBytesExt};
 use simple_error::SimpleError;
@@ -57,7 +57,30 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
     )(input)
 }
 
+//TODO: no error context
+fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+    let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
+    let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
+    let (input, bytes) = nom::bytes::complete::take::<usize,_,_>(length.into())(input)?;
+    Ok((input, Extension { field_type, value: Box::new(bytes.to_vec()) }))
+}
+
+fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
+    let mut res: Vec<Extension> = Vec::new();
+    let mut i = input;
+    
+    while i.len() > Packet::AUTH_SIZE {
+        let (ni, extension) = parse_extension(input)?;
+        i = ni;
+        res.push(extension);
+    }
+
+    Ok((i, res))
+}
+
 pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, SimpleError>> {
+    let has_extensions = input.len() > Packet::BASE_SIZE + Packet::AUTH_SIZE;
+
     nom::error::context(
         "ntp_packet",
         nom::combinator::map(
@@ -67,6 +90,10 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     nom::sequence::tuple((
                         parse_metadata,
                         parse_timedata,
+                        nom::error::context(
+                            "ntp_extensions",
+                            nom::combinator::cond(has_extensions, parse_extensions)
+                        ),
                         parse_auth,
                     ))
                 ),
@@ -75,6 +102,7 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
               (leap_indicator, version, mode),
               ((stratum, poll, precision, root_delay, root_dispersion, reference_id),
                (reference_timestamp, origin_timestamp, receive_timestamp, transit_timestamp),
+               extensions,
                auth),
             )| {
                 Ok(Packet {
@@ -92,6 +120,8 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     origin_timestamp: origin_timestamp.into(), 
                     receive_timestamp: receive_timestamp.into(), 
                     transit_timestamp: transit_timestamp.into(),
+
+                    extensions: extensions,
 
                     auth,
                 })

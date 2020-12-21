@@ -185,10 +185,10 @@ macro_rules! gen_timestamp_trait {
 gen_timestamp_trait!(Timestamp, u64, u32);
 gen_timestamp_trait!(Short, u32, u16);
 
-#[derive(Debug)]
-pub struct ExtensionField {
+#[derive(Debug,Clone)]
+pub struct Extension {
     pub field_type: u16,
-    pub length: u16,
+    //pub length: u16,
     pub value: Box<Vec<u8>>,
 }
 
@@ -207,18 +207,19 @@ pub struct Packet {
     pub origin_timestamp: Timestamp,        //64 bits?
     pub receive_timestamp: Timestamp,       //64 bits?
     pub transit_timestamp: Timestamp,       //64 bits?
-    //pub extensions: Vec<Extensions>,      //depends
+    pub extensions: Option<Vec<Extension>>, //depends
     pub auth: Option<Auth>                  //32 bits, 128 bits, optional
 }
 //big endian
 
 impl Packet {
     pub const BASE_SIZE: usize = 48;
+    pub const AUTH_SIZE: usize = 20;
 
     pub fn size(&self) -> usize {
         let mut size = Self::BASE_SIZE; 
         if let Some(_) = self.auth {
-            size += 20;
+            size += Self::AUTH_SIZE;
         }
         //TODO: EXTENSIONS!!!
         size
