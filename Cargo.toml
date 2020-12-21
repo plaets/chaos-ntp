@@ -1,10 +1,14 @@
 [package]
 name = "chaos-ntp"
+
 version = "0.1.0"
 authors = ["plates"]
+description = "time desynchronization service"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+repository = "https://github.com/plaets/chaos-ntp/"
+readme = "README.md"
+license = "MIT"
 
 [dependencies]
 nom = "6.0.1"
