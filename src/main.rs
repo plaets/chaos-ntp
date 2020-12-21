@@ -4,6 +4,9 @@ use std::time::{SystemTime,Instant};
 use rand::{random,distributions::{Distribution,Uniform}};
 mod ntp;
 use ntp::types::{TimestampTrait,Short};
+use log::{error, info, trace, warn};
+use fern;
+use chrono;
 
 struct Server {
     time_offset: i64, //time offset in seconds
@@ -63,8 +66,24 @@ impl Server {
     }
 }
 
+fn setup_logger() -> Result<(), fern::InitError> {
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}", 
+                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Trace)
+        .chain(std::io::stdout())
+        .apply()?;
+    Ok(())
+}
 
-fn main() -> std::io::Result<()> {
+fn start_server() -> std::io::Result<()> {
     let port: u16 = 123;
     let ip = String::from("0.0.0.0");
     let socket = UdpSocket::bind(ip + ":" + &port.to_string())?;
@@ -72,12 +91,12 @@ fn main() -> std::io::Result<()> {
     let mut server = Server::new();
     let mut buf = [0;65527];
 
-    println!("started");
+    info!("started");
 
     loop { 
         match socket.recv_from(&mut buf) {
             Ok((amt, addr)) => {
-                println!("{:}, {}", addr, amt);
+                trace!("request from {:}, {}", addr, amt);
                 //turns out ntp packets shorter than 48 bytes also valid? idk anymore
                 //im just going to assume that if the packet is shorter than the usual size the
                 //rest is filled with zeros
@@ -85,24 +104,29 @@ fn main() -> std::io::Result<()> {
                                                    else { ntp::types::Packet::BASE_SIZE })]) 
                     .and_then(|packet| {
                         let packet = packet.1.unwrap();
-                        println!("{:?} {:?}", &packet, &packet.reference_timestamp);
+                        trace!("{:?} {:?}", &packet, &packet.reference_timestamp);
                         let tt = packet.transit_timestamp;
                         let new_packet = server.process_packet(packet);
-                        println!("responding with: {:?} {:x} {:x} {:x}", &new_packet, tt.get_seconds()-&new_packet.transit_timestamp.get_seconds(), tt, &new_packet.transit_timestamp);
+                        trace!("responding with: {:?} {:x} {:x} {:x}", &new_packet, tt.get_seconds()-&new_packet.transit_timestamp.get_seconds(), tt, &new_packet.transit_timestamp);
                         let serialized = ntp::parser::serialize_packet(&new_packet);
                         if let Ok(buf) = serialized {
                             socket.send_to(&buf, addr).unwrap();
                         } else {
-                            println!("serializing error: {:?} {:?}", serialized.err(), &buf);
+                            warn!("serializing error: {:?} {:?}", serialized.err(), &buf);
                         }
                         Ok(())
                     })
-                    .map_err(|err| println!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
+                    .map_err(|err| warn!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
             },
             Err(err) => {
-                eprintln!("Error: {}", err);
+                error!("error: {}", err);
             }
         }
     }
+}
+
+fn main() -> std::io::Result<()> {
+    setup_logger().unwrap();
+    start_server()
 }
 
