@@ -58,7 +58,6 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
     )(input)
 }
 
-//TODO: no error context
 fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
     let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
     let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
@@ -68,9 +67,10 @@ fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
 
 //at this point i just stopped caring about that nom syntax sugar
 //i have no idea how to implement this the correct:tm: way
-//i think i its still missing some error handling, what if the extension field has incorrect length
+//i think its still missing some error handling, what if the extension field has incorrect length
 //and we accidentally consume some bytes from the auth fields
 //i think this case is not handled at all yet, i need to start writing tests
+//update: maybe its handled now but im not sure if its the correct way 
 fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
     let mut res: Vec<Extension> = Vec::new();
     let mut i = input;
@@ -81,7 +81,11 @@ fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
         res.push(extension);
     }
 
-    Ok((i, res))
+    if i.len() < Packet::AUTH_SIZE {
+        Err(nom::Err::Incomplete(nom::Needed::Size(core::num::NonZeroUsize::new(Packet::AUTH_SIZE-i.len()).unwrap())))
+    } else {
+        Ok((i, res))
+    }
 }
 
 pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, SimpleError>> {
@@ -120,7 +124,7 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     poll, precision, 
                     root_delay: root_delay.into(), 
                     root_dispersion: root_dispersion.into(),
-                    reference_id: reference_id[0..4].try_into().map_err(|_| "invlaid reference_id")?,
+                    reference_id: reference_id[0..4].try_into().map_err(|_| "invalid reference_id")?,
 
                     reference_timestamp: reference_timestamp.into(), 
                     origin_timestamp: origin_timestamp.into(), 

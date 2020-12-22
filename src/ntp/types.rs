@@ -77,7 +77,7 @@ pub enum LeapIndicator {
     Unknown = 3,
 }
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub enum Stratum {
     Unspecified,
     PrimaryServer,
@@ -213,6 +213,7 @@ pub struct Packet {
 //big endian
 
 impl Packet {
+    //TODO: maybe all of this should be moved to the parser
     pub const BASE_SIZE: usize = 48;
     pub const AUTH_SIZE: usize = 20;
     pub const EXT_HEAD_SIZE: usize = 4;
