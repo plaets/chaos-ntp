@@ -1,4 +1,5 @@
 use std::convert::{TryFrom,TryInto,From,Into};
+use std::num::TryFromIntError;
 use std::mem::size_of;
 use simple_error::SimpleError;
 use num_enum::{IntoPrimitive,TryFromPrimitive};
@@ -162,8 +163,10 @@ pub trait TimestampTrait<T, H> {
     fn get_seconds(self) -> H;
     fn get_fraction(self) -> H;
     fn fraction_as_nanoseconds(self) -> u32;
+
     fn set_seconds(self, seconds: H) -> T;
     fn set_fraction(self, fraction: H) -> T;
+    fn fraction_from_nanoseconds(self, fraction: u32) -> Result<T, TryFromIntError>;
 }
 
 impl Timestamp {
@@ -214,6 +217,11 @@ macro_rules! gen_timestamp_trait {
             //try_from just so this crashes if thats not the case
             fn fraction_as_nanoseconds(self) -> u32 {
                 u32::try_from(((self.get_fraction() as u64)*1_000_000_000u64)/(1u64 << 32)).unwrap()
+            }
+
+            //TODO: this probably does not work as expected
+            fn fraction_from_nanoseconds(self, fraction: u32) -> Result<Self, TryFromIntError> {
+                ((fraction as u64)/1_000_000_000u64).try_into().and_then(|f| Ok(self.set_fraction(f)))
             }
         }
     }
