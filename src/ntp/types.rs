@@ -3,6 +3,7 @@ use std::mem::size_of;
 use simple_error::SimpleError;
 use num_enum::{IntoPrimitive,TryFromPrimitive};
 use derive_more::{Add,Mul,From,Into,Deref,DerefMut,LowerHex};
+use chrono::naive::NaiveDate;
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum KoD {
@@ -160,8 +161,28 @@ pub trait TimestampTrait<T, H> {
 
     fn get_seconds(self) -> H;
     fn get_fraction(self) -> H;
+    fn fraction_as_nanoseconds(self) -> u32;
     fn set_seconds(self, seconds: H) -> T;
     fn set_fraction(self, fraction: H) -> T;
+}
+
+impl Timestamp {
+    //seems like chrono does not handle leap seconds yet...
+    //is this really an issue?
+    pub fn into_utc_datetime(self) -> chrono::DateTime<chrono::offset::Utc> {
+        //2208988800 - 1970-1900 as seconds
+        let ntp_epoch = chrono::naive::NaiveDate::from_ymd(1900, 1, 1).and_hms(0, 0, 0);
+        let seconds = chrono::Duration::seconds(self.get_seconds().into());
+        let nanoseconds = chrono::Duration::nanoseconds(self.fraction_as_nanoseconds().into());
+        chrono::DateTime::from_utc(ntp_epoch + seconds + nanoseconds, chrono::offset::Utc)
+    }
+}
+
+impl Short {
+    pub fn into_duration(self) -> chrono::Duration {
+        chrono::Duration::seconds(self.get_seconds().into()) + 
+            chrono::Duration::nanoseconds(self.fraction_as_nanoseconds().into())
+    }
 }
 
 //this probably is broken 
@@ -171,13 +192,29 @@ macro_rules! gen_timestamp_trait {
         impl TimestampTrait<$name, $halfsize> for $name {
             type HalfSize = $halfsize;
 
-            fn get_seconds(self) -> $halfsize { ($size::from(self) >> ((size_of::<$halfsize>() as $halfsize)*8)) as $halfsize }
-            fn get_fraction(self) -> $halfsize { $size::from(self) as $halfsize }
-            fn set_seconds(self, seconds: $halfsize) -> Self { (((seconds as $size) << (size_of::<$halfsize>()*8)) 
-                | $size::from((self.get_fraction()))).into() }
+            fn get_seconds(self) -> $halfsize { 
+                ($size::from(self) >> ((size_of::<$halfsize>() as $halfsize)*8)) as $halfsize 
+            }
+
+            fn get_fraction(self) -> $halfsize { 
+                $size::from(self) as $halfsize 
+            }
+
+            fn set_seconds(self, seconds: $halfsize) -> Self { 
+                (((seconds as $size) << (size_of::<$halfsize>()*8)) 
+                | $size::from((self.get_fraction()))).into() 
+            }
+
             fn set_fraction(self, fraction: $halfsize) -> Self { 
                 ($size::from(self) & (((1 << size_of::<$halfsize>()*8)-1) << size_of::<$halfsize>()*8) 
-                 | (fraction as $size)).into() }
+                 | (fraction as $size)).into() 
+            }
+
+            //im pretty sure that the fraction converted into nanoseconds should fit into u32...
+            //try_from just so this crashes if thats not the case
+            fn fraction_as_nanoseconds(self) -> u32 {
+                u32::try_from(((self.get_fraction() as u64)*1_000_000_000u64)/(1u64 << 32)).unwrap()
+            }
         }
     }
 }
