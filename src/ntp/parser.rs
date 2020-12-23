@@ -1,5 +1,6 @@
 use std::convert::{TryFrom,TryInto};
-use nom::IResult;
+use std::io::Write;
+use nom::{IResult,Into};
 use nom;
 use byteorder::{BigEndian, WriteBytesExt};
 use simple_error::SimpleError;
@@ -57,7 +58,39 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
     )(input)
 }
 
+fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+    let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
+    let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
+    let (input, bytes) = nom::bytes::complete::take::<usize,_,_>(length.into())(input)?;
+    Ok((input, Extension { field_type, value: bytes.to_vec() }))
+}
+
+//at this point i just stopped caring about that nom syntax sugar
+//i have no idea how to implement this the correct:tm: way
+//i think its still missing some error handling, what if the extension field has incorrect length
+//and we accidentally consume some bytes from the auth fields
+//i think this case is not handled at all yet, i need to start writing tests
+//update: maybe its handled now but im not sure if its the correct way 
+fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
+    let mut res: Vec<Extension> = Vec::new();
+    let mut i = input;
+    
+    while i.len() > Packet::AUTH_SIZE {
+        let (ni, extension) = parse_extension(input)?;
+        i = ni;
+        res.push(extension);
+    }
+
+    if i.len() < Packet::AUTH_SIZE {
+        Err(nom::Err::Incomplete(nom::Needed::Size(core::num::NonZeroUsize::new(Packet::AUTH_SIZE-i.len()).unwrap())))
+    } else {
+        Ok((i, res))
+    }
+}
+
 pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, SimpleError>> {
+    let has_extensions = input.len() > Packet::BASE_SIZE + Packet::AUTH_SIZE;
+
     nom::error::context(
         "ntp_packet",
         nom::combinator::map(
@@ -67,6 +100,10 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     nom::sequence::tuple((
                         parse_metadata,
                         parse_timedata,
+                        nom::error::context(
+                            "ntp_extensions",
+                            nom::combinator::cond(has_extensions, parse_extensions)
+                        ),
                         parse_auth,
                     ))
                 ),
@@ -75,6 +112,7 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
               (leap_indicator, version, mode),
               ((stratum, poll, precision, root_delay, root_dispersion, reference_id),
                (reference_timestamp, origin_timestamp, receive_timestamp, transit_timestamp),
+               extensions,
                auth),
             )| {
                 Ok(Packet {
@@ -86,12 +124,14 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     poll, precision, 
                     root_delay: root_delay.into(), 
                     root_dispersion: root_dispersion.into(),
-                    reference_id: reference_id[0..4].try_into().map_err(|_| "invlaid reference_id")?,
+                    reference_id: reference_id[0..4].try_into().map_err(|_| "invalid reference_id")?,
 
                     reference_timestamp: reference_timestamp.into(), 
                     origin_timestamp: origin_timestamp.into(), 
                     receive_timestamp: receive_timestamp.into(), 
                     transit_timestamp: transit_timestamp.into(),
+
+                    extensions: extensions,
 
                     auth,
                 })
@@ -118,7 +158,13 @@ pub fn serialize_packet(packet: &Packet) -> Result<Vec<u8>, Box<dyn std::error::
     data.write_u64::<BigEndian>(packet.receive_timestamp.into())?;
     data.write_u64::<BigEndian>(packet.transit_timestamp.into())?;
 
-    //TODO: EXTENSIONS!!!
+    if let Some(extensions) = &packet.extensions {
+        for n in extensions {
+            data.write_u16::<BigEndian>(n.field_type)?;
+            data.write_u16::<BigEndian>(n.value.len() as u16)?;
+            data.write_all(&n.value)?;
+        }
+    }
     
     if let Some(auth) = &packet.auth { 
         data.write_u32::<BigEndian>(auth.key_indentifier)?;

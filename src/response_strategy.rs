@@ -4,6 +4,26 @@ use rand::{random,distributions::{Distribution,Uniform}};
 use ntp::types::{TimestampTrait,Short,Timestamp};
 use crate::ntp;
 
+fn default_packet() -> ntp::types::Packet {
+    ntp::types::Packet {
+        leap_indicator: ntp::types::LeapIndicator::NoWarning,
+        version: 4,
+        mode: ntp::types::Mode::Server,
+        stratum: ntp::types::Stratum::SecondaryServer(4),
+        poll: 6,
+        precision: -16,
+        root_delay: Short::from(0).set_fraction(1000),
+        root_dispersion: Short::from(0).set_fraction(1000),
+        reference_id: [0,0,0,0],
+        origin_timestamp: 0.into(),
+        reference_timestamp: 0.into(),
+        receive_timestamp: 0.into(),
+        transit_timestamp: 0.into(),
+        extensions: None,
+        auth: None,
+    }
+}
+
 //TODO errors?
 pub trait ResponseStrategy {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet;
@@ -54,20 +74,11 @@ impl ResponseStrategy for SingleOffsetResponseStrategy {
         let fraction = 0;//rand::random::<u32>();
 
         ntp::types::Packet {
-            leap_indicator: ntp::types::LeapIndicator::NoWarning,
-            version: 4,
-            mode: ntp::types::Mode::Server,
-            stratum: ntp::types::Stratum::SecondaryServer(4),
-            poll: 6,
-            precision: -16,
-            root_delay: Short::from(0).set_fraction(1000),
-            root_dispersion: Short::from(0).set_fraction(1000),
-            reference_id: [0,0,0,0],
             origin_timestamp: packet.transit_timestamp,
             reference_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction), //last set
             receive_timestamp: rand_time.set_fraction(fraction),
             transit_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction),
-            auth: None,
+            ..default_packet()
         }
     }
 }
@@ -77,20 +88,11 @@ pub struct TransitTimestampResponseStrategy { }
 impl ResponseStrategy for TransitTimestampResponseStrategy {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
         ntp::types::Packet {
-            leap_indicator: ntp::types::LeapIndicator::NoWarning,
-            version: 4,
-            mode: ntp::types::Mode::Server,
-            stratum: ntp::types::Stratum::SecondaryServer(4),
-            poll: 6,
-            precision: -16,
-            root_delay: Short::from(0).set_fraction(1000),
-            root_dispersion: Short::from(0).set_fraction(1000),
-            reference_id: [0,0,0,0],
             origin_timestamp: packet.transit_timestamp,
             reference_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()-5),
             receive_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
             transit_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
-            auth: None,
+            ..default_packet()
         }
     }
 }

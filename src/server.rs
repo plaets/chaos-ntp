@@ -1,7 +1,9 @@
 use std::net::{UdpSocket,IpAddr};
 use slog_scope::{info,error,warn};
+use chrono::SecondsFormat;
 use crate::ntp;
 use crate::response_strategy::ResponseStrategy;
+use crate::ntp::types::Timestamp;
 
 pub struct Server {
     pub port: u16,
@@ -20,7 +22,6 @@ impl Server {
         loop { 
             match socket.recv_from(&mut buf) {
                 Ok((amt, addr)) => {
-                    info!("request from {:}, {}", addr, amt);
                     //turns out ntp packets shorter than 48 bytes also valid? idk anymore
                     //im just going to assume that if the packet is shorter than the usual size the
                     //rest is filled with zeros
@@ -28,10 +29,16 @@ impl Server {
                                                        else { ntp::types::Packet::BASE_SIZE })]) 
                         .and_then(|packet| {
                             let packet = packet.1.unwrap();
-                            info!("{:?} {:?}", &packet, &packet.reference_timestamp);
+                            info!("request from ip: {:}, size: {}, timestamp: {}, full_packet: {:?}", addr, amt, 
+                                  packet.transit_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
+                                  packet);
                             let tt = packet.transit_timestamp;
                             let new_packet = self.response_strategy.process_packet(packet);
-                            info!("responding with: {:?} {:x} {:x}", &new_packet, tt, &new_packet.transit_timestamp);
+                            info!("responding to {:} with: ref: {}, org: {}, recv: {}, xmit: {}", addr,
+                                new_packet.reference_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
+                                new_packet.origin_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
+                                new_packet.receive_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
+                                new_packet.transit_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true));
                             let serialized = ntp::parser::serialize_packet(&new_packet);
                             if let Ok(buf) = serialized {
                                 socket.send_to(&buf, addr).unwrap();
