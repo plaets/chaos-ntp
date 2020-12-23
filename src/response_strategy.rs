@@ -29,14 +29,14 @@ pub trait ResponseStrategy {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet;
 }
 
-pub struct SingleOffsetResponseStrategy {
+pub struct SingleOffset {
     time_offset: i64, //time offset in seconds
     last_update: Instant,
     offset_range: Range<i64>,
     counter: u32,
 }
 
-impl SingleOffsetResponseStrategy {
+impl SingleOffset {
     pub fn new() -> Self { 
         let offset_range = (0)..(60*60*24*2);
         Self {
@@ -67,7 +67,7 @@ impl SingleOffsetResponseStrategy {
     }
 }
 
-impl ResponseStrategy for SingleOffsetResponseStrategy {
+impl ResponseStrategy for SingleOffset {
     //TODO: use config
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
         let rand_time = (ntp::types::Timestamp::from(0)).set_seconds(self.get_time() as u32); 
@@ -83,15 +83,32 @@ impl ResponseStrategy for SingleOffsetResponseStrategy {
     }
 }
 
-pub struct TransitTimestampResponseStrategy { }
-
-impl ResponseStrategy for TransitTimestampResponseStrategy {
+pub struct TransitTimestamp { }
+impl ResponseStrategy for TransitTimestamp {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
         ntp::types::Packet {
             origin_timestamp: packet.transit_timestamp,
             reference_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()-5),
             receive_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
             transit_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
+            ..default_packet()
+        }
+    }
+}
+
+//TODO reference/receive/transit timestamps should be probably be different from each other
+pub struct CurrentTime { }
+impl ResponseStrategy for CurrentTime {
+    fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
+        ntp::types::Packet {
+            origin_timestamp: packet.transit_timestamp,
+            //time at the client when the request departed for the server
+            reference_timestamp: ntp::types::Timestamp::from_utc_datetime(chrono::offset::Utc::now()).unwrap(),
+            //Time when the system clock was last set or corrected, in NTP timestamp format
+            receive_timestamp: ntp::types::Timestamp::from_utc_datetime(chrono::offset::Utc::now()).unwrap(),
+            //time at the server when the request arrived from the client
+            transit_timestamp: ntp::types::Timestamp::from_utc_datetime(chrono::offset::Utc::now()).unwrap(),
+            //time at the server when the response left for the client
             ..default_packet()
         }
     }

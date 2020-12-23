@@ -225,8 +225,9 @@ impl Timestamp {
     pub fn from_utc_datetime(datetime: chrono::DateTime<chrono::offset::Utc>) -> Result<Self,TryFromIntError> {
         let ntp_epoch = chrono::naive::NaiveDate::from_ymd(1900, 1, 1).and_hms(0, 0, 0);
         let duration = datetime.naive_utc()-ntp_epoch;
-        Ok(Self::from((duration.num_seconds() as u64) << 32u32).fraction_from_nanoseconds(
-            duration.num_nanoseconds().unwrap_or(0).try_into()?)?)
+        let nanoseconds = duration.num_nanoseconds().unwrap_or(0)
+            - chrono::Duration::seconds(duration.num_seconds()).num_nanoseconds().unwrap_or(0);
+        Ok(Self::from((duration.num_seconds() as u64) << 32u32).fraction_from_nanoseconds(nanoseconds.try_into()?)?)
     }
 }
 

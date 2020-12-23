@@ -12,7 +12,7 @@ fn main() -> std::io::Result<()> {
         port: 123,
         addr: IpAddr::from_str("0.0.0.0").map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
         log_req_resp: true,
-        response_strategy: Box::from(response_strategy::SingleOffsetResponseStrategy::new()),
+        response_strategy: Box::from(response_strategy::CurrentTime{}),
     };
     server.start_server()
 }
