@@ -19,7 +19,7 @@ simple-error = "0.2.2"
 derive_more = "0.99.0"
 
 slog = "2.7"
-slog-term = "2.6"
+slog-term = "2.6.0"
 slog-async = "2.5"
 slog-scope = "4.3"
 
