@@ -2,12 +2,12 @@ use core::ops::Range;
 use std::net::UdpSocket;
 use std::time::{SystemTime,Instant};
 use rand::{random,distributions::{Distribution,Uniform}};
+use chrono;
+use slog_scope::{info,error,warn};
 mod ntp;
 use ntp::types::{TimestampTrait,Short};
-use slog::{o,Drain,info,trace,warn,error};
-use slog_term;
-use slog_async;
-use chrono;
+mod logger;
+use logger::setup_logger;
 
 struct Server {
     time_offset: i64, //time offset in seconds
@@ -75,17 +75,12 @@ fn start_server() -> std::io::Result<()> {
     let mut server = Server::new();
     let mut buf = [0;65527];
 
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let log = slog::Logger::root(drain, o!());
-
-    info!(log, "started");
+    info!("started");
 
     loop { 
         match socket.recv_from(&mut buf) {
             Ok((amt, addr)) => {
-                info!(log, "request from {:}, {}", addr, amt);
+                info!("request from {:}, {}", addr, amt);
                 //turns out ntp packets shorter than 48 bytes also valid? idk anymore
                 //im just going to assume that if the packet is shorter than the usual size the
                 //rest is filled with zeros
@@ -93,22 +88,22 @@ fn start_server() -> std::io::Result<()> {
                                                    else { ntp::types::Packet::BASE_SIZE })]) 
                     .and_then(|packet| {
                         let packet = packet.1.unwrap();
-                        info!(log, "{:?} {:?}", &packet, &packet.reference_timestamp);
+                        info!("{:?} {:?}", &packet, &packet.reference_timestamp);
                         let tt = packet.transit_timestamp;
                         let new_packet = server.process_packet(packet);
-                        info!(log, "responding with: {:?} {:x} {:x}", &new_packet, tt, &new_packet.transit_timestamp);
+                        info!("responding with: {:?} {:x} {:x}", &new_packet, tt, &new_packet.transit_timestamp);
                         let serialized = ntp::parser::serialize_packet(&new_packet);
                         if let Ok(buf) = serialized {
                             socket.send_to(&buf, addr).unwrap();
                         } else {
-                            warn!(log, "serializing error: {:?} {:?}", serialized.err(), &buf);
+                            warn!("serializing error: {:?} {:?}", serialized.err(), &buf);
                         } 
                         Ok(())
                     })
-                    .map_err(|err| warn!(log, "parsing error: {} {:x?}", err, &buf[0..amt])).ok();
+                    .map_err(|err| warn!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
             },
             Err(err) => {
-                error!(log, "error: {}", err);
+                error!("error: {}", err);
             }
         }
     }
