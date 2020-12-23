@@ -18,8 +18,9 @@ num_enum = "0.5.1"
 simple-error = "0.2.2"
 derive_more = "0.99.0"
 
-log = "0.4"
-fern = "0.6"
+slog = "2.7"
+slog-term = "2.6"
+slog-async = "2.5"
 
 chrono = "0.4"
 rand = "0.7.3"
