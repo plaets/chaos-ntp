@@ -110,6 +110,7 @@ fn start_server() -> std::io::Result<()> {
 }
 
 fn main() -> std::io::Result<()> {
+    let guard = setup_logger();
     start_server()
 }
 
