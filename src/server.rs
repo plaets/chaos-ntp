@@ -1,7 +1,6 @@
 use std::net::{UdpSocket,IpAddr};
 use slog_scope::{info,error,warn};
 use crate::ntp;
-use crate::ntp::types::{TimestampTrait,Short};
 use crate::response_strategy::ResponseStrategy;
 
 pub struct Server {
@@ -50,3 +49,4 @@ impl Server {
         }
     }
 }
+

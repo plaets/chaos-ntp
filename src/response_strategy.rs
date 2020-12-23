@@ -1,9 +1,10 @@
 use core::ops::Range;
 use std::time::{SystemTime,Instant};
 use rand::{random,distributions::{Distribution,Uniform}};
-use ntp::types::{TimestampTrait,Short};
+use ntp::types::{TimestampTrait,Short,Timestamp};
 use crate::ntp;
 
+//TODO errors?
 pub trait ResponseStrategy {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet;
 }
@@ -66,6 +67,29 @@ impl ResponseStrategy for SingleOffsetResponseStrategy {
             reference_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction), //last set
             receive_timestamp: rand_time.set_fraction(fraction),
             transit_timestamp: rand_time.set_seconds(rand_time.get_seconds()).set_fraction(fraction),
+            auth: None,
+        }
+    }
+}
+
+pub struct TransitTimestampResponseStrategy { }
+
+impl ResponseStrategy for TransitTimestampResponseStrategy {
+    fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
+        ntp::types::Packet {
+            leap_indicator: ntp::types::LeapIndicator::NoWarning,
+            version: 4,
+            mode: ntp::types::Mode::Server,
+            stratum: ntp::types::Stratum::SecondaryServer(4),
+            poll: 6,
+            precision: -16,
+            root_delay: Short::from(0).set_fraction(1000),
+            root_dispersion: Short::from(0).set_fraction(1000),
+            reference_id: [0,0,0,0],
+            origin_timestamp: packet.transit_timestamp,
+            reference_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()-5),
+            receive_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
+            transit_timestamp: packet.transit_timestamp.set_seconds(packet.transit_timestamp.get_seconds()+1),
             auth: None,
         }
     }
