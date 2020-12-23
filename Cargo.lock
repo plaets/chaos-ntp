@@ -52,6 +52,7 @@ dependencies = [
  "fern",
  "log",
  "nom",
+ "num-integer",
  "num_enum",
  "rand",
  "simple-error",

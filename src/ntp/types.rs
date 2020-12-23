@@ -25,6 +25,7 @@ pub enum KoD {
     Unknown([u8;4]),
 }
 
+//this should be generated somhow, same thing with from
 impl Into<[u8;4]> for KoD {
     fn into(self) -> [u8;4] {
         match self {
@@ -68,6 +69,46 @@ impl From<&[u8;4]> for KoD {
             _ => Self::Unknown(data.clone())
         }
     }
+}
+
+#[derive(Debug,Eq,PartialEq,Clone,Copy,IntoPrimitive,TryFromPrimitive)]
+#[repr(u16)]
+pub enum ExtensionFieldType {
+    Noop = 0x002,
+    Unique = 0x0104,
+    NTSCookie = 0x0204,
+    NTSCookiePlaceholder = 0x0304,
+    NTPAuthentictor = 0x0404,
+    NoopResponse = 0x8002,
+    NoopError = 0xc002,
+    AssociationRequest = 0x0102,
+    AssociationResponse = 0x8102,
+    AssociationError = 0xc102,
+    CertificateRequest = 0x0202,
+    CertificateResponse = 0x8202,
+    CertificateError = 0xc202,
+    CookieRequest = 0x0302,
+    CookieResponse = 0x8302,
+    CookieError = 0xc302,
+    AutokeyRequest = 0x0402,
+    AutokeyResponse = 0x8402,
+    AutokeyError = 0xc402,
+    LeapsecondsRequest = 0x0502,
+    LeapsecondsResponse = 0x8502,
+    LeapsecondsError = 0xc502,
+    SignRequest = 0x0602,
+    SignResponse = 0x8602,
+    SignError = 0xc602,
+    IFFIdentityRequest = 0x0702,
+    IFFIdentityResponse = 0x8702,
+    IFFIdentityError = 0xc702,
+    GQIdentityRequest = 0x0802,
+    GQIdentityResponse = 0x8802,
+    GQIdentityError = 0xc802,
+    MVIdentityRequest = 0x0902,
+    MVIdentityResponse = 0x8902,
+    MVIdentityError = 0xc902,
+    ChecksumComplement = 0x2005
 }
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy,IntoPrimitive,TryFromPrimitive)]
@@ -150,6 +191,7 @@ pub struct Date {
 //update: so apparently while this is not used in the packet, it can be used in the server/client
 //still not sure why, how am i supposed to know from which era did the packet come from, should i
 //just assume that it came from my era?
+//update: i think i know why
 
 #[derive(Debug,Clone,Eq,PartialEq,Ord,PartialOrd,Copy,Add,Mul,Deref,DerefMut,From,Into,LowerHex)]
 pub struct Timestamp(pub u64);
@@ -179,12 +221,24 @@ impl Timestamp {
         let nanoseconds = chrono::Duration::nanoseconds(self.fraction_as_nanoseconds().into());
         chrono::DateTime::from_utc(ntp_epoch + seconds + nanoseconds, chrono::offset::Utc)
     }
+
+    pub fn from_utc_datetime(datetime: chrono::DateTime<chrono::offset::Utc>) -> Result<Self,TryFromIntError> {
+        let ntp_epoch = chrono::naive::NaiveDate::from_ymd(1900, 1, 1).and_hms(0, 0, 0);
+        let duration = datetime.naive_utc()-ntp_epoch;
+        Ok(Self::from((duration.num_seconds() as u64) << 32u32).fraction_from_nanoseconds(
+            duration.num_nanoseconds().unwrap_or(0).try_into()?)?)
+    }
 }
 
 impl Short {
     pub fn into_duration(self) -> chrono::Duration {
         chrono::Duration::seconds(self.get_seconds().into()) + 
             chrono::Duration::nanoseconds(self.fraction_as_nanoseconds().into())
+    }
+
+    pub fn from_duration(duration: chrono::Duration) -> Result<Self,TryFromIntError> {
+        Ok(Self((duration.num_seconds() as u32) << 16u16).fraction_from_nanoseconds(
+            duration.num_nanoseconds().unwrap_or(0).try_into()?)?)
     }
 }
 
@@ -213,15 +267,15 @@ macro_rules! gen_timestamp_trait {
                  | (fraction as $size)).into() 
             }
 
-            //im pretty sure that the fraction converted into nanoseconds should fit into u32...
-            //try_from just so this crashes if thats not the case
+            //loosy - fraction_from_nanoseconds(fraction_as_nanoseconds) != fraction
             fn fraction_as_nanoseconds(self) -> u32 {
-                u32::try_from(((self.get_fraction() as u64)*1_000_000_000u64)/(1u64 << 32)).unwrap()
+                //u32::try_from((((self.get_fraction() as u64)*1_000_000_000u64)/(1u64 << 32))).unwrap()
+                u32::try_from(((self.get_fraction() as u64)*1_000_000_000u64) >> 32).unwrap()
             }
 
-            //TODO: this probably does not work as expected
-            fn fraction_from_nanoseconds(self, fraction: u32) -> Result<Self, TryFromIntError> {
-                ((fraction as u64)/1_000_000_000u64).try_into().and_then(|f| Ok(self.set_fraction(f)))
+            fn fraction_from_nanoseconds(self, nanoseconds: u32) -> Result<Self, TryFromIntError> {
+                (((nanoseconds as u64) << 32u64)/1_000_000_000u64)
+                    .try_into().and_then(|f| Ok(self.set_fraction(f)))
             }
         }
     }

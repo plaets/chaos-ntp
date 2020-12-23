@@ -82,9 +82,6 @@ fn valid_client_packet() {
     assert_eq!(parsed.receive_timestamp, Timestamp::from(0)); 
     assert_eq!(parsed.transit_timestamp, Timestamp::from(0).set_seconds(0xe38c4fd4).set_fraction(0xd7472dcd)); 
 
-    assert_eq!(parsed.transit_timestamp.into_utc_datetime().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
-        "2020-12-22T10:58:28.840929853Z");
-
     assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
 }
 

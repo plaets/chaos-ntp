@@ -14,11 +14,21 @@ fn timestamp() {
     assert_eq!(0x12345678_00052141 as u64, timestamp.set_fraction(0x52141).into());
     assert_eq!(0x52141, timestamp.set_fraction(0x52141).get_fraction());
 
+
+    assert_eq!(Timestamp::from(0).set_seconds(0xe38c4fd4).set_fraction(0xd7472dcd).into_utc_datetime().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
+        "2020-12-22T10:58:28.840929853Z");
+}
+
+//loosy - fraction_from_nanoseconds(fraction_as_nanoseconds) != fraction
+#[test]
+fn nanoseconds_conversions_timestamp() {
+    let timestamp = Timestamp::from(0);
+
     assert_eq!(840929853, timestamp.set_fraction(3611766221).fraction_as_nanoseconds());
     assert_eq!(912855987, timestamp.set_fraction(3920686612).fraction_as_nanoseconds());
 
-    assert_eq!(3611766221, timestamp.fraction_from_nanoseconds(912855987).unwrap().get_fraction());
-    assert_eq!(912855987, timestamp.fraction_from_nanoseconds(3920686612).unwrap().get_fraction());
+    assert_eq!(3611766216, timestamp.fraction_from_nanoseconds(840929853).unwrap().get_fraction());
+    assert_eq!(3920686610, timestamp.fraction_from_nanoseconds(912855987).unwrap().get_fraction());
 }
 
 #[test]
