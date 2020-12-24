@@ -1,8 +1,6 @@
-use slog::{o,Drain,info,trace,warn,error};
-use slog_term::RecordDecorator;
+use slog::{o,Drain};
 use slog_async;
 use slog_scope;
-use std::io;
 
 //should i use structured logging? rn i just pack everything into string
 pub fn setup_logger() -> slog_scope::GlobalLoggerGuard {

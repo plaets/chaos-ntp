@@ -1,9 +1,8 @@
 use std::net::{UdpSocket,IpAddr};
-use slog_scope::{info,error,warn};
+use slog_scope::{info,error};
 use chrono::SecondsFormat;
 use crate::ntp;
 use crate::response_strategy::ResponseStrategy;
-use crate::ntp::types::Timestamp;
 
 pub struct Server {
     pub port: u16,
@@ -32,7 +31,6 @@ impl Server {
                             info!("request from ip: {:}, size: {}, timestamp: {}, full_packet: {:?}", addr, amt, 
                                   packet.transit_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
                                   packet);
-                            let tt = packet.transit_timestamp;
                             let new_packet = self.response_strategy.process_packet(packet);
                             info!("responding to {:} with: ref: {}, org: {}, recv: {}, xmit: {}", addr,
                                 new_packet.reference_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),

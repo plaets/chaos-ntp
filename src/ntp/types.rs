@@ -4,112 +4,6 @@ use std::mem::size_of;
 use simple_error::SimpleError;
 use num_enum::{IntoPrimitive,TryFromPrimitive};
 use derive_more::{Add,Mul,From,Into,Deref,DerefMut,LowerHex};
-use chrono::naive::NaiveDate;
-
-#[derive(Debug,Eq,PartialEq,Clone,Copy)]
-pub enum KoD {
-    ACST,   //the associtaion belongs to a unicast server
-    AUTH,   //server authentication failed
-    AUTO,   //autokey sequence failed
-    BCST,   //the association belongs to a broadcast server
-    CRYP,   //cyrptographic authentication or identification failed
-    DENY,   //access denied by remote server
-    DROP,   //lost peer in symmetric mode
-    RSTR,   //access denied due to local policy
-    INIT,   //the association has not yet synchronized for the first time
-    MCST,   //the association belongs to a dynamically discovered server
-    NKEY,   //no key found. either the key was never installed or is not trusted
-    RATE,   //rate exceeded, access denied temporarily
-    RMOT,   //alteration of associations from a remote host running ntpdc
-    STEP,   //a step change in system time has occured, but the association has not yet resynchronized
-    Unknown([u8;4]),
-}
-
-//this should be generated somhow, same thing with from
-impl Into<[u8;4]> for KoD {
-    fn into(self) -> [u8;4] {
-        match self {
-            Self::ACST => *b"ACST",
-            Self::AUTH => *b"AUTH",
-            Self::AUTO => *b"AUTO",
-            Self::BCST => *b"BCST",
-            Self::CRYP => *b"CRYP",
-            Self::DENY => *b"DENY",
-            Self::DROP => *b"DROP",
-            Self::RSTR => *b"RSTR",
-            Self::INIT => *b"INIT",
-            Self::MCST => *b"MCST",
-            Self::NKEY => *b"NKEY",
-            Self::RATE => *b"RATE",
-            Self::RMOT => *b"RMOT",
-            Self::STEP => *b"STEP",
-            Self::Unknown(data) => data
-        }
-    }
-}
-
-//this was never tested so far and probably is not very ergonomic
-impl From<&[u8;4]> for KoD {
-    fn from(data: &[u8;4]) -> KoD {
-        match data {
-            b"ACST" => Self::ACST,
-            b"AUTH" => Self::AUTH,
-            b"AUTO" => Self::AUTO,
-            b"BCST" => Self::BCST,
-            b"CRYP" => Self::CRYP,
-            b"DENY" => Self::DENY,
-            b"DROP" => Self::DROP,
-            b"RSTR" => Self::RSTR,
-            b"INIT" => Self::INIT,
-            b"MCST" => Self::MCST,
-            b"NKEY" => Self::NKEY,
-            b"RATE" => Self::RATE,
-            b"RMOT" => Self::RMOT,
-            b"STEP" => Self::STEP,
-            _ => Self::Unknown(data.clone())
-        }
-    }
-}
-
-#[derive(Debug,Eq,PartialEq,Clone,Copy,IntoPrimitive,TryFromPrimitive)]
-#[repr(u16)]
-pub enum ExtensionFieldType {
-    Noop = 0x002,
-    Unique = 0x0104,
-    NTSCookie = 0x0204,
-    NTSCookiePlaceholder = 0x0304,
-    NTPAuthentictor = 0x0404,
-    NoopResponse = 0x8002,
-    NoopError = 0xc002,
-    AssociationRequest = 0x0102,
-    AssociationResponse = 0x8102,
-    AssociationError = 0xc102,
-    CertificateRequest = 0x0202,
-    CertificateResponse = 0x8202,
-    CertificateError = 0xc202,
-    CookieRequest = 0x0302,
-    CookieResponse = 0x8302,
-    CookieError = 0xc302,
-    AutokeyRequest = 0x0402,
-    AutokeyResponse = 0x8402,
-    AutokeyError = 0xc402,
-    LeapsecondsRequest = 0x0502,
-    LeapsecondsResponse = 0x8502,
-    LeapsecondsError = 0xc502,
-    SignRequest = 0x0602,
-    SignResponse = 0x8602,
-    SignError = 0xc602,
-    IFFIdentityRequest = 0x0702,
-    IFFIdentityResponse = 0x8702,
-    IFFIdentityError = 0xc702,
-    GQIdentityRequest = 0x0802,
-    GQIdentityResponse = 0x8802,
-    GQIdentityError = 0xc802,
-    MVIdentityRequest = 0x0902,
-    MVIdentityResponse = 0x8902,
-    MVIdentityError = 0xc902,
-    ChecksumComplement = 0x2005
-}
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy,IntoPrimitive,TryFromPrimitive)]
 #[repr(u8)]
@@ -142,7 +36,6 @@ impl TryFrom<u8> for Stratum {
         })
     }
 }
-
 
 impl TryInto<u8> for Stratum {
     type Error = SimpleError;
@@ -286,7 +179,7 @@ gen_timestamp_trait!(Timestamp, u64, u32);
 gen_timestamp_trait!(Short, u32, u16);
 
 #[derive(Debug,Clone)]
-pub struct Extension {
+pub struct ExtensionField {
     pub field_type: u16,
     //pub length: u16,
     pub value: Vec<u8>,
@@ -307,7 +200,7 @@ pub struct Packet {
     pub origin_timestamp: Timestamp,        //64 bits?
     pub receive_timestamp: Timestamp,       //64 bits?
     pub transit_timestamp: Timestamp,       //64 bits?
-    pub extensions: Option<Vec<Extension>>, //depends
+    pub extensions: Option<Vec<ExtensionField>>, //depends
     pub auth: Option<Auth>                  //32 bits, 128 bits, optional
 }
 //big endian

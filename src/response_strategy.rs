@@ -1,7 +1,5 @@
-use core::ops::Range;
-use std::time::{SystemTime,Instant};
-use rand::{random,distributions::{Distribution,Uniform}};
-use ntp::types::{TimestampTrait,Short,Timestamp};
+use std::time::{SystemTime};
+use ntp::types::{TimestampTrait,Short};
 use crate::ntp;
 
 fn default_packet() -> ntp::types::Packet {
@@ -31,20 +29,13 @@ pub trait ResponseStrategy {
 
 pub struct SingleOffset {
     time_offset: i64, //time offset in seconds
-    last_update: Instant,
-    offset_range: Range<i64>,
     counter: u32,
 }
 
 impl SingleOffset {
     pub fn new() -> Self { 
-        let offset_range = (0)..(60*60*24*2);
         Self {
-            //time_offset: Uniform::from((-60*60*24*180)..(60*60*24*365*1)).sample(&mut rand::thread_rng()),
-            offset_range: offset_range.clone(),
-            //time_offset: Uniform::from(offset_range).sample(&mut rand::thread_rng()),
             time_offset: 0,
-            last_update: Instant::now(),
             counter: 0,
         }
     }

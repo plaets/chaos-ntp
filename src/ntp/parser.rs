@@ -1,6 +1,6 @@
 use std::convert::{TryFrom,TryInto};
 use std::io::Write;
-use nom::{IResult,Into};
+use nom::{IResult};
 use nom;
 use byteorder::{BigEndian, WriteBytesExt};
 use simple_error::SimpleError;
@@ -58,11 +58,11 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
     )(input)
 }
 
-fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
+fn parse_extension(input: &[u8]) -> IResult<&[u8], ExtensionField> {
     let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
     let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
     let (input, bytes) = nom::bytes::complete::take::<usize,_,_>(length.into())(input)?;
-    Ok((input, Extension { field_type, value: bytes.to_vec() }))
+    Ok((input, ExtensionField { field_type, value: bytes.to_vec() }))
 }
 
 //at this point i just stopped caring about that nom syntax sugar
@@ -71,8 +71,8 @@ fn parse_extension(input: &[u8]) -> IResult<&[u8], Extension> {
 //and we accidentally consume some bytes from the auth fields
 //i think this case is not handled at all yet, i need to start writing tests
 //update: maybe its handled now but im not sure if its the correct way 
-fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<Extension>> {
-    let mut res: Vec<Extension> = Vec::new();
+fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<ExtensionField>> {
+    let mut res: Vec<ExtensionField> = Vec::new();
     let mut i = input;
     
     while i.len() > Packet::AUTH_SIZE {
