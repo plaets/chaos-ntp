@@ -1,5 +1,5 @@
 #[non_exhaustive]
-struct ClockSource;
+pub struct ClockSource;
 #[allow(dead_code)]
 impl ClockSource {
     pub const GOES: [u8;4] = *b"GOES";
@@ -24,7 +24,7 @@ impl ClockSource {
 }
 
 #[non_exhaustive]
-struct KoD;
+pub struct KoD;
 #[allow(dead_code)]
 impl KoD {
     pub const ACST: [u8;4] = *b"ACST";   //the associtaion belongs to a unicast server
@@ -47,10 +47,10 @@ impl KoD {
 //if there only was a macro such as num_enum that supports arrays and a variant for all the other
 //values
 #[non_exhaustive]
-struct ExtensionFieldType;
+pub struct ExtensionFieldType;
 #[allow(dead_code)]
 impl ExtensionFieldType {
-    pub const NOOP: u16 = 0x002;
+    pub const NOOP: u16 = 0x0020;
     pub const UNIQUE: u16 = 0x0104;
     pub const NTS_COOKIE: u16 = 0x0204;
     pub const NTS_COOKIE_PLACEHOLDER: u16 = 0x0304;

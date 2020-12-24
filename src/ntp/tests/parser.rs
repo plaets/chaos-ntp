@@ -1,5 +1,6 @@
 use crate::ntp::types::*;
 use crate::ntp::parser::*;
+use crate::ntp::constants::*;
 
 //TODO: timestamp parsing/formatting
 //TODO: fractions
@@ -81,6 +82,51 @@ fn valid_client_packet() {
     assert_eq!(parsed.origin_timestamp, Timestamp::from(0)); 
     assert_eq!(parsed.receive_timestamp, Timestamp::from(0)); 
     assert_eq!(parsed.transit_timestamp, Timestamp::from(0).set_seconds(0xe38c4fd4).set_fraction(0xd7472dcd)); 
+
+    assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
+}
+
+//TODO: this packet was made up, catch one from real traffic
+//TODO: digest verification
+//TODO: padding?
+#[test]
+fn valid_client_packet_with_extensions() {
+    static PACKET: &'static [u8] = &[
+        0xe3,                                           //unknown leap, ntpv4, client
+        0x00,                                           //stratum unspecified
+        0x03,                                           //poll interval 3 (interval?)
+        0xfa,                                           //clock precision (0,015625)
+        0x00, 0x01, 0x00, 0x00,                         //root delay 1 second
+        0x00, 0x01, 0x00, 0x00,                         //root dispersion 1 second
+        0x00, 0x00, 0x00, 0x00,                         //reference id
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //reference timestamp
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //origin timestamp
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //receive timestamp
+        0xe3, 0x8c, 0x4f, 0xd4, 0xd7, 0x47, 0x2d, 0xcd, //transit timestamp (Dec 22, 2020 10:58:28.840929853 UTC)
+        0x00, 0x20, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, //noop extension field
+        0x00, 0x00, 0x00, 0x00,                         //auth key_id
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //auth digest
+    ];
+
+    let parsed = parse_packet(PACKET).unwrap().1.unwrap();
+
+    assert_eq!(parsed.leap_indicator, LeapIndicator::Unknown);
+    assert_eq!(parsed.version, 4);
+    assert_eq!(parsed.mode, Mode::Client);
+    assert_eq!(parsed.stratum, Stratum::Unspecified);
+    assert_eq!(parsed.poll, 3);
+    assert_eq!(parsed.precision, -6); //TODO
+    assert_eq!(parsed.root_delay, Short::from(0).set_seconds(1).set_fraction(0)); //TODO: how to interpret fractions?
+    assert_eq!(parsed.root_dispersion, Short::from(0).set_seconds(1).set_fraction(0)); 
+    assert_eq!(parsed.reference_id, [0x0, 0x0, 0x0, 0x0]);
+    assert_eq!(parsed.reference_timestamp, Timestamp::from(0)); 
+    assert_eq!(parsed.origin_timestamp, Timestamp::from(0)); 
+    assert_eq!(parsed.receive_timestamp, Timestamp::from(0)); 
+    assert_eq!(parsed.transit_timestamp, Timestamp::from(0).set_seconds(0xe38c4fd4).set_fraction(0xd7472dcd)); 
+    assert_eq!(parsed.extensions.clone().unwrap()[0].field_type, ExtensionFieldType::NOOP);
+    assert_eq!(parsed.auth.clone().unwrap().key_indentifier, 0);
+    assert_eq!(parsed.auth.clone().unwrap().digest, 0);
 
     assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
 }
