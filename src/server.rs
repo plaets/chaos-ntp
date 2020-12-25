@@ -26,7 +26,7 @@ impl Server {
                     //rest is filled with zeros
                     ntp::parser::parse_packet(&buf[0..(if amt > ntp::types::Packet::BASE_SIZE { amt } 
                                                        else { ntp::types::Packet::BASE_SIZE })]) 
-                        .and_then(|packet| {
+                        .map(|packet| {
                             let packet = packet.1.unwrap();
                             info!("request from ip: {:}, size: {}, timestamp: {}, full_packet: {:?}", addr, amt, 
                                   packet.transit_timestamp.into_utc_datetime().to_rfc3339_opts(SecondsFormat::Nanos, true),
@@ -43,7 +43,6 @@ impl Server {
                             } else {
                                 error!("serializing error: {:?} {:?}", serialized.err(), &buf);
                             } 
-                            Ok(())
                         })
                         .map_err(|err| info!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
                 },

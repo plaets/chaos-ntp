@@ -213,7 +213,7 @@ impl Packet {
 
     pub fn size(&self) -> usize {
         let mut size = Self::BASE_SIZE; 
-        if let Some(_) = self.auth {
+        if self.auth.is_some() {
             size += Self::AUTH_SIZE;
         }
         if let Some(extensions) = &self.extensions {

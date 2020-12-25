@@ -1,7 +1,6 @@
 use std::convert::{TryFrom,TryInto};
 use std::io::Write;
 use nom::{IResult};
-use nom;
 use byteorder::{BigEndian, WriteBytesExt};
 use simple_error::SimpleError;
 use super::types::*;
@@ -17,7 +16,9 @@ fn parse_header(input: (&[u8], usize)) -> IResult<(&[u8], usize), (u8, u8, u8)> 
     )(input)
 }
 
-fn parse_metadata(input: &[u8]) -> IResult<&[u8], (u8, i8, i8, u32, u32, &[u8])> {
+//stratum poll precision root_delay root_dispersion reference_id
+type HeaderTuple<'a> = (u8, i8, i8, u32, u32, &'a [u8]);
+fn parse_metadata(input: &[u8]) -> IResult<&[u8], HeaderTuple> {
     nom::error::context(
         "ntp_metadata",
         nom::sequence::tuple((
@@ -53,7 +54,7 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
                     nom::number::complete::u128(nom::number::Endianness::Big),  //digest
                 ))
             ),
-            |auth| auth.and_then(|a| Some(Auth { key_indentifier: a.0, digest: a.1 }))
+            |auth| auth.map(|a| Auth { key_indentifier: a.0, digest: a.1 })
         )
     )(input)
 }
@@ -131,8 +132,7 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
                     receive_timestamp: receive_timestamp.into(), 
                     transit_timestamp: transit_timestamp.into(),
 
-                    extensions: extensions,
-
+                    extensions,
                     auth,
                 })
             },
