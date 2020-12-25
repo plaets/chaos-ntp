@@ -27,4 +27,5 @@ jobs:
         path: |
           target/release/chaos-ntp
     - name: Run tests
-      run: cargo test --verbose
+      uses: actions-rs/tarpaulin@v0.1
+      #run: cargo test --verbose
