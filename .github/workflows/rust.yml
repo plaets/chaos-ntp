@@ -46,7 +46,7 @@ jobs:
       with:
         type: lcov
         result_path: lcov.info
-        min_coverage: 90
+        min_coverage: 60
         token: ${{ github.token }}
 
     - name: Build
