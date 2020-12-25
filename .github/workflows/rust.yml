@@ -37,6 +37,16 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all-features
 
+    - name: Run tests
+      uses: actions-rs/tarpaulin@v0.1
+      with:
+        out-type: Lcov
+
+    - uses: romeovs/lcov-reporter-action@v0.2.17
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        lcov-file: ./lcov.info
+
     - name: Build
       run: |
         cargo build --verbose
@@ -47,14 +57,3 @@ jobs:
         name: chaos-ntp
         path: |
           target/release/chaos-ntp
-
-    - name: Run tests
-      uses: actions-rs/tarpaulin@v0.1
-      with:
-        out-type: Lcov
-
-    - uses: romeovs/lcov-reporter-action@v0.2.16
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        lcov-file: ./lcov.info
-
