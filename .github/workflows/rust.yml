@@ -31,24 +31,25 @@ jobs:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-    - run: rustup component add clippy
-    - uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-features
-
     - name: Run tests
       uses: actions-rs/tarpaulin@v0.1
       with:
         out-type: Lcov
+        args: '-r .'
 
-    - uses: plaets/coverage-check-action@2e0175c333da70cac5ff574b1ea96bd05ab1abb0
+    - uses: plaets/coverage-check-action@a015018
       with:
         type: lcov
         result_path: lcov.info
         min_coverage: 60
         show_coverage_per_file: true
         token: ${{ github.token }}
+
+    - run: rustup component add clippy
+    - uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --all-features
 
     - name: Build
       run: |
