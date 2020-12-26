@@ -42,11 +42,12 @@ jobs:
       with:
         out-type: Lcov
 
-    - uses: devmasx/coverage-check-action@v1.2.0
+    - uses: plaets/coverage-check-action@2e0175c333da70cac5ff574b1ea96bd05ab1abb0
       with:
         type: lcov
         result_path: lcov.info
         min_coverage: 60
+        show_coverage_per_file: true
         token: ${{ github.token }}
 
     - name: Build
