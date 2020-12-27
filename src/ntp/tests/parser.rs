@@ -125,8 +125,8 @@ fn valid_client_packet_with_extensions() {
     assert_eq!(parsed.receive_timestamp, Timestamp::from(0)); 
     assert_eq!(parsed.transit_timestamp, Timestamp::from(0).set_seconds(0xe38c4fd4).set_fraction(0xd7472dcd)); 
     assert_eq!(parsed.extensions.clone().unwrap()[0].field_type, ExtensionFieldType::NOOP);
-    assert_eq!(parsed.auth.clone().unwrap().key_indentifier, 0);
-    assert_eq!(parsed.auth.clone().unwrap().digest, 0);
+    assert_eq!(parsed.auth.unwrap().key_indentifier, 0);
+    assert_eq!(parsed.auth.unwrap().digest, 0);
 
     assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
 }

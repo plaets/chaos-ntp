@@ -66,7 +66,7 @@ pub enum Mode {
     ReservedForPrivate = 7,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Copy)]
 pub struct Auth {
     pub key_indentifier: u32,   //32 bits, optional
     pub digest: u128,           //128 bits, optional

@@ -147,7 +147,7 @@ pub fn parse_packet(input: &[u8]) -> IResult<(&[u8], usize), Result<Packet, Simp
 pub fn serialize_packet(packet: &Packet) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut data: Vec<u8> = Vec::with_capacity(packet.size());
 
-    let packet_indicator: u8 = packet.leap_indicator.clone().into();
+    let packet_indicator: u8 = packet.leap_indicator.into();
     let mode: u8 = packet.mode.into();
     let header = (packet_indicator << 6) | (packet.version << 3) | (mode);
     data.write_u8(header)?;
