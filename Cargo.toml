@@ -26,3 +26,6 @@ slog-scope = "4.3"
 chrono = "0.4"
 rand = "0.7.3"
 
+[profile.release]
+lto = true
+

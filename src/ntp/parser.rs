@@ -5,6 +5,10 @@ use byteorder::{BigEndian, WriteBytesExt};
 use simple_error::SimpleError;
 use super::types::*;
 
+//now that i think about it, maybe using nom for parsing something as simple as an ntp packet was
+//not the smartest idea 
+//had fun though
+
 fn parse_header(input: (&[u8], usize)) -> IResult<(&[u8], usize), (u8, u8, u8)> {
     nom::error::context(
         "ntp_header",

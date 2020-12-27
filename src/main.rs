@@ -8,11 +8,12 @@ mod response_strategy;
 
 fn main() -> std::io::Result<()> {
     let _guard = setup_logger();
+    let mut rs = response_strategy::CurrentTime{};
     let mut server = server::Server {
         port: 123,
         addr: IpAddr::from_str("0.0.0.0").map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
         log_req_resp: true,
-        response_strategy: Box::from(response_strategy::CurrentTime{}),
+        response_strategy: &mut rs,
     };
     server.start_server()
 }
