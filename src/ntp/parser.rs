@@ -65,7 +65,9 @@ fn parse_auth(input: &[u8]) -> IResult<&[u8], Option<Auth>> {
 
 fn parse_extension(input: &[u8]) -> IResult<&[u8], ExtensionField> {
     let (input, field_type) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
-    let (input, length) = nom::number::complete::u16(nom::number::Endianness::Big)(input)?;
+    let (input, length) = nom::combinator::verify(
+        nom::number::complete::u16(nom::number::Endianness::Big),
+        |s| *s > 0 && input.len() > Packet::AUTH_SIZE && usize::from(*s) <= input.len()-Packet::AUTH_SIZE)(input)?;
     let (input, bytes) = nom::bytes::complete::take::<usize,_,_>(length.into())(input)?;
     Ok((input, ExtensionField { field_type, value: bytes.to_vec() }))
 }

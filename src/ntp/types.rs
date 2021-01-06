@@ -210,6 +210,7 @@ impl Packet {
     pub const BASE_SIZE: usize = 48;
     pub const AUTH_SIZE: usize = 20;
     pub const EXT_HEAD_SIZE: usize = 4;
+    pub const MAX_SIZE: usize = 65527; //max udp payload
 
     pub fn size(&self) -> usize {
         let mut size = Self::BASE_SIZE; 
