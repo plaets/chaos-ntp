@@ -21,9 +21,17 @@ impl<'a> Server<'a> {
         loop { 
             match socket.recv_from(&mut buf) {
                 Ok((amt, addr)) => {
+                    println!("from: {:}, size: {}, data: {:?}", addr, amt, &buf[..amt]);
                     //turns out ntp packets shorter than 48 bytes also valid? idk anymore
                     //im just going to assume that if the packet is shorter than the usual size the
                     //rest is filled with zeros
+                    //TODO: the buffer is not zeroed out every time so if the packet size is
+                    //smaller than the base size data from the last packet will be used...
+                    if amt < ntp::types::Packet::BASE_SIZE {
+                        //hopefully this works but didnt think, +1 just in case
+                        //i cant work with ranges without off-by-one errors everywhere
+                        buf[amt..ntp::types::Packet::BASE_SIZE+1].iter_mut().for_each(|c| *c = 0);
+                    }
                     ntp::parser::parse_packet(&buf[0..(if amt > ntp::types::Packet::BASE_SIZE { amt } 
                                                        else { ntp::types::Packet::BASE_SIZE })]) 
                         .map(|packet| {

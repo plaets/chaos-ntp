@@ -8,7 +8,7 @@ mod response_strategy;
 
 fn main() -> std::io::Result<()> {
     let _guard = setup_logger();
-    let mut rs = response_strategy::CurrentTime{};
+    let mut rs = response_strategy::SingleOffset::new();
     let mut server = server::Server {
         port: 123,
         addr: IpAddr::from_str("0.0.0.0").map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
