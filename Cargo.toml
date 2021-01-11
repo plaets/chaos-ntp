@@ -11,7 +11,7 @@ readme = "README.md"
 license = "MIT"
 
 [[bin]]
-name = "client"
+name = "chaos-ntp-client"
 path = "src/client.rs"
 
 [[bin]]
