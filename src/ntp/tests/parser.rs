@@ -1,6 +1,7 @@
 use crate::ntp::types::*;
 use crate::ntp::parser::*;
 use crate::ntp::constants::*;
+use std::convert::{TryInto,TryFrom};
 
 //TODO: timestamp parsing/formatting
 //TODO: fractions
@@ -47,6 +48,15 @@ fn valid_server_packet() {
         "2020-12-22T10:58:28.912855987Z");
     assert_eq!(parsed.transit_timestamp.into_utc_datetime().to_rfc3339_opts(chrono::SecondsFormat::Nanos, true),
         "2020-12-22T10:58:28.912869946Z");
+
+    
+    let d: chrono::DateTime<chrono::Utc> = chrono::DateTime::from_utc(
+        chrono::DateTime::parse_from_rfc3339("2020-12-22T10:58:28.912869946Z").unwrap().naive_utc(),
+        chrono::Utc);
+
+    //some parts of fraction are lost during conversion
+    assert_eq!(Timestamp::from_utc_datetime(d).unwrap().get_seconds(),
+               parsed.transit_timestamp.get_seconds());
 
     assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
 }
@@ -129,6 +139,8 @@ fn valid_client_packet_with_extensions() {
     assert_eq!(parsed.auth.unwrap().digest, 0);
 
     assert_eq!(serialize_packet(&parsed).unwrap(), PACKET);
+
+    assert_eq!(parsed.size(), PACKET.len());
 }
 
 //packet with extension field with size zero
@@ -151,5 +163,53 @@ fn invalid_packet_ext_field_length_zero() {
         nom::Err::Error(err) => assert_eq!(err.code, nom::error::ErrorKind::Verify),
         _ => assert!(false),
     }
+}
+
+#[test]
+fn invalid_packet_auth_size() {
+    static PACKET: &'static [u8] = &[
+        0xe3,                                           //unknown leap, ntpv4, client
+        0x00,                                           //stratum unspecified
+        0x03,                                           //poll interval 3 (interval?)
+        0xfa,                                           //clock precision (0,015625)
+        0x00, 0x01, 0x00, 0x00,                         //root delay 1 second
+        0x00, 0x01, 0x00, 0x00,                         //root dispersion 1 second
+        0x00, 0x00, 0x00, 0x00,                         //reference id
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //reference timestamp
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //origin timestamp
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //receive timestamp
+        0xe3, 0x8c, 0x4f, 0xd4, 0xd7, 0x47, 0x2d, 0xcd, //transit timestamp (Dec 22, 2020 10:58:28.840929853 UTC)
+        0x00, 0x20, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, //noop extension field
+        0x00, 0x00, 0x00, 0x00,                         //auth key_id
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,       //auth digest
+    ];
+
+    let parsed = parse_packet(PACKET);
+
+    match parsed.err().unwrap() {
+        //its a bit parser so 8 (8 bits -> 1 byte)
+        nom::Err::Incomplete(err) => assert_eq!(err, nom::Needed::new(8)),
+        _ => assert!(false),
+    }
+}
+
+#[test]
+fn stratum_values() {
+    for n in 1..2 {
+        let err: Result<u8, _> = Stratum::SecondaryServer(n).try_into();
+        assert!(err.is_err());
+    }
+    for n in 16..255 {
+        let err: Result<u8, _> = Stratum::SecondaryServer(n).try_into();
+        assert!(err.is_err());
+    }
+    for n in 0..17 {
+        let err: Result<u8, _> = Stratum::Reserved(n).try_into();
+        assert!(err.is_err());
+    }
+    assert_eq!(Stratum::try_from(1).unwrap(), Stratum::PrimaryServer);
+    assert_eq!(Stratum::try_from(16).unwrap(), Stratum::Unsynchronized);
+    assert_eq!(Stratum::try_from(17).unwrap(), Stratum::Reserved(17));
 }
 

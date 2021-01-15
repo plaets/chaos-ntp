@@ -44,5 +44,9 @@ fn short() {
     assert_eq!(0x1234, short.set_fraction(0x5214).get_seconds());
     assert_eq!(0x1234_5214 as u32, short.set_fraction(0x5214).into());
     assert_eq!(0x5214, short.set_fraction(0x5214).get_fraction());
+
+    assert_eq!(Short::from_duration(chrono::Duration::seconds(15)).unwrap().get_seconds(), 15);
+    assert_eq!(Short::from_duration(chrono::Duration::seconds(15)).unwrap().get_fraction(), 0);
+    assert_eq!(Short(0).set_seconds(15).into_duration(), chrono::Duration::seconds(15));
 }
 

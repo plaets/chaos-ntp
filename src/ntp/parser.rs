@@ -89,7 +89,7 @@ fn parse_extensions(input: &[u8]) -> IResult<&[u8], Vec<ExtensionField>> {
     }
 
     if i.len() < Packet::AUTH_SIZE {
-        Err(nom::Err::Incomplete(nom::Needed::Size(core::num::NonZeroUsize::new(Packet::AUTH_SIZE-i.len()).unwrap())))
+        Err(nom::Err::Incomplete(nom::Needed::new(Packet::AUTH_SIZE-i.len())))
     } else {
         Ok((i, res))
     }

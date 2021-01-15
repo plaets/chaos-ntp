@@ -132,7 +132,9 @@ impl Short {
 
     pub fn from_duration(duration: chrono::Duration) -> Result<Self,TryFromIntError> {
         Ok(Self((duration.num_seconds() as u32) << 16u16).fraction_from_nanoseconds(
-            duration.num_nanoseconds().unwrap_or(0).try_into()?)?)
+                duration.checked_sub(&chrono::Duration::seconds(duration.num_seconds()))
+                    .unwrap().num_nanoseconds().unwrap().try_into()?
+            )?)
     }
 }
 
