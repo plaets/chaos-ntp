@@ -63,3 +63,4 @@ jobs:
         path: |
           target/release/chaos-ntp
           target/release/chaos-ntp-client
+

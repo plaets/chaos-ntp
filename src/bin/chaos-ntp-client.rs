@@ -1,8 +1,7 @@
 use std::net::{UdpSocket, ToSocketAddrs};
 use clap::{Arg, App};
 use chrono::Utc;
-mod ntp;
-use ntp::{parser::{serialize_packet, parse_packet}, types::*};
+use chaos_ntp::ntp::{parser::{serialize_packet, parse_packet}, types::*};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = App::new("chaos-ntp client")

@@ -10,14 +10,6 @@ repository = "https://github.com/plaets/chaos-ntp/"
 readme = "README.md"
 license = "MIT"
 
-[[bin]]
-name = "chaos-ntp-client"
-path = "src/client.rs"
-
-[[bin]]
-name = "chaos-ntp"
-path = "src/main.rs"
-
 [dependencies]
 nom = "6.0"
 byteorder = "1.3"

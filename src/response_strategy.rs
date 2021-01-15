@@ -2,6 +2,8 @@ use std::time::{SystemTime};
 use ntp::types::{TimestampTrait,Short};
 use crate::ntp;
 
+inventory::collect!(&'static dyn ResponseStrategyCtor);
+
 fn default_packet() -> ntp::types::Packet {
     ntp::types::Packet {
         leap_indicator: ntp::types::LeapIndicator::NoWarning,
@@ -35,7 +37,7 @@ pub trait ResponseStrategy {
 macro_rules! empty_ctor {
     ($name:ident) => {
         paste::paste! {
-            struct [<$name Ctor>];
+            pub struct [<$name Ctor>];
             impl ResponseStrategyCtor for [<$name Ctor>] {
                 fn new(&self) -> Box<dyn ResponseStrategy> { 
                     Box::new($name {})
@@ -75,7 +77,7 @@ impl SingleOffset {
     }
 }
 
-struct SingleOffsetCtor;
+pub struct SingleOffsetCtor;
 impl ResponseStrategyCtor for SingleOffsetCtor {
     fn new(&self) -> Box<dyn ResponseStrategy> { 
         Box::new(SingleOffset {
