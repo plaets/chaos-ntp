@@ -4,14 +4,14 @@ use chrono::SecondsFormat;
 use crate::ntp;
 use crate::response_strategy::ResponseStrategy;
 
-pub struct Server<'a> {
+pub struct Server {
     pub port: u16,
     pub addr: IpAddr,
     pub log_req_resp: bool,
-    pub response_strategy: &'a mut dyn ResponseStrategy,
+    pub response_strategy: Box<dyn ResponseStrategy>,
 }
 
-impl<'a> Server<'a> {
+impl Server {
     pub fn start_server(&mut self) -> std::io::Result<()> {
         let socket = UdpSocket::bind(self.addr.to_string() + ":" + &self.port.to_string())?;
         let mut buf = [0;65527];

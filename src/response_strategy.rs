@@ -22,9 +22,33 @@ fn default_packet() -> ntp::types::Packet {
     }
 }
 
+pub trait ResponseStrategyCtor {
+    fn new(&self) -> Box<dyn ResponseStrategy>;
+    fn name(&self) -> &'static str;
+}
+
 //TODO errors?
 pub trait ResponseStrategy {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet;
+}
+
+macro_rules! empty_ctor {
+    ($name:ident) => {
+        paste::paste! {
+            struct [<$name Ctor>];
+            impl ResponseStrategyCtor for [<$name Ctor>] {
+                fn new(&self) -> Box<dyn ResponseStrategy> { 
+                    Box::new($name {})
+                }
+
+                fn name(&self) -> &'static str { stringify!([<$name:snake>]) }
+            }
+
+            inventory::submit! {
+                &[<$name Ctor>] as &dyn ResponseStrategyCtor
+            }
+        }
+    }
 }
 
 pub struct SingleOffset {
@@ -33,13 +57,6 @@ pub struct SingleOffset {
 }
 
 impl SingleOffset {
-    pub fn new() -> Self { 
-        Self {
-            time_offset: 0,
-            counter: 0,
-        }
-    }
-
     //offset to a strategy
     //TODO: this magic 70*365... represents the offset of unix epoch in relation to ntp epoch
     //(1.1.1900). sorta represents because the date is still wrong by a few days when time offset is 0
@@ -58,6 +75,22 @@ impl SingleOffset {
     }
 }
 
+struct SingleOffsetCtor;
+impl ResponseStrategyCtor for SingleOffsetCtor {
+    fn new(&self) -> Box<dyn ResponseStrategy> { 
+        Box::new(SingleOffset {
+            time_offset: 0,
+            counter: 0,
+        })
+    }
+    
+    fn name(&self) -> &'static str { "single_offset" }
+}
+
+inventory::submit! {
+    &SingleOffsetCtor as &dyn ResponseStrategyCtor
+}
+
 impl ResponseStrategy for SingleOffset {
     //TODO: use config
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
@@ -74,7 +107,8 @@ impl ResponseStrategy for SingleOffset {
     }
 }
 
-pub struct TransitTimestamp { }
+pub struct TransitTimestamp;
+empty_ctor!(TransitTimestamp);
 impl ResponseStrategy for TransitTimestamp {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
         ntp::types::Packet {
@@ -88,7 +122,8 @@ impl ResponseStrategy for TransitTimestamp {
 }
 
 //TODO reference/receive/transit timestamps should be probably be different from each other
-pub struct CurrentTime { }
+pub struct CurrentTime;
+empty_ctor!(CurrentTime);
 impl ResponseStrategy for CurrentTime {
     fn process_packet(&mut self, packet: ntp::types::Packet) -> ntp::types::Packet {
         ntp::types::Packet {
