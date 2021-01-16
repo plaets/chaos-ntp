@@ -1,7 +1,7 @@
 use std::net::{UdpSocket,IpAddr};
 use slog_scope::{info,error};
 use chrono::SecondsFormat;
-use crate::ntp;
+use chaos_ntp::ntp;
 use crate::response_strategy::ResponseStrategy;
 
 pub struct Server {

@@ -1,10 +1,11 @@
-use std::net::{IpAddr};
-use std::str::FromStr;
 use config::{Config,File};
-use chaos_ntp::server;
-use chaos_ntp::response_strategy::{ResponseStrategyCtor};
-use chaos_ntp::logger::setup_logger;
-use chaos_ntp::config::ServerConfig;
+mod server;
+mod response_strategy;
+use response_strategy::{ResponseStrategyCtor};
+mod logger;
+use logger::setup_logger;
+mod server_config;
+use server_config::ServerConfig;
 
 fn main() -> std::io::Result<()> {
     let _guard = setup_logger();

@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use config::{Config,ConfigError,Value};
+use config::{Value};
 use std::net::IpAddr;
 use std::collections::HashMap;
 use std::str::FromStr;

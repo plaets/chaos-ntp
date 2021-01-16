@@ -1,6 +1,6 @@
 use std::time::{SystemTime};
-use ntp::types::{TimestampTrait,Short};
-use crate::ntp;
+use chaos_ntp::ntp;
+use chaos_ntp::ntp::types::{TimestampTrait,Short};
 
 inventory::collect!(&'static dyn ResponseStrategyCtor);
 
