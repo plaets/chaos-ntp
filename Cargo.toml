@@ -29,6 +29,7 @@ rand = "0.7"
 clap = "2.33"
 config = "0.10"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 inventory = "0.1"
 paste = "1.0"

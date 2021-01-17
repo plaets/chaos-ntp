@@ -121,6 +121,7 @@ dependencies = [
  "paste",
  "rand",
  "serde 1.0.118",
+ "serde_json",
  "simple-error",
  "slog",
  "slog-async",
