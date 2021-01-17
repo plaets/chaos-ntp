@@ -1,5 +1,7 @@
 use config::{Config,File};
 use clap::{App,Arg,ArgMatches,SubCommand};
+use toml;
+use std::io::Write;
 mod server;
 mod response_strategy;
 use response_strategy::{ResponseStrategyCtor};
@@ -17,17 +19,18 @@ fn get_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(SubCommand::with_name("start")
                     .about("start the server")
                     .arg(Arg::with_name("config")
+                         .value_name("PATH")
+                         .default_value("chaos-ntpd.conf")
                          .short("c")
                          .long("config")
-                         .value_name("PATH")
                          .help("use config from path")
                          .takes_value(true)))
         .subcommand(SubCommand::with_name("generate-config")
                     .about("generate the default configuration file")
                     .arg(Arg::with_name("path")
-                         .short("p")
-                         .long("path")
                          .value_name("PATH")
+                         .default_value("chaos-ntpd.conf")
+                         .required(true)
                          .help("path of the new config file")
                          .takes_value(true)))
 }
@@ -35,7 +38,7 @@ fn get_app<'a, 'b>() -> App<'a, 'b> {
 fn start(args: &ArgMatches) -> std::io::Result<()> { 
     let mut config_rep: Config = Config::new();
     match args.value_of("config") {
-        Some(path) => config_rep = config_rep.merge(File::with_name(path))
+        Some(path) => config_rep = config_rep.merge(File::with_name(path).format(config::FileFormat::Toml))
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err))?.clone(),
         None => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::NotFound, format!("no config file provided")))?
     }
@@ -76,10 +79,22 @@ fn start(args: &ArgMatches) -> std::io::Result<()> {
         log_all_requests: config.log.log_all_requests,
         response_strategy: rs,
     };
-    server.start_server()
+    server.start_server().map_err(|err| match err.kind() {
+        std::io::ErrorKind::PermissionDenied => {
+            println!("Permission to bind to port {} was denied", config.server.port);
+            err
+        }
+        _ => err
+    })
 }
 
 fn generate_config(args: &ArgMatches) -> std::io::Result<()> {
+    let path = args.value_of("path").unwrap();
+    let mut file = std::fs::File::create(path)?;
+    let mut cfg = ServerConfig::default();
+    let data = toml::to_string_pretty(&cfg).unwrap();
+    file.write(data.as_bytes())?;
+    println!("Generated {}", path);
     Ok(())
 }
 

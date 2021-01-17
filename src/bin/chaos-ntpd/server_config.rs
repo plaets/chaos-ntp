@@ -2,7 +2,7 @@ use std::net::IpAddr;
 use std::collections::HashMap;
 use std::str::FromStr;
 use serde::{Deserialize,Serialize};
-use serde_json::Value;
+use toml::value::Value;
 use slog::Level;
 
 #[derive(Debug,Serialize,Deserialize,Clone,)]
@@ -54,6 +54,6 @@ impl Default for Log {
 pub struct ServerConfig {
     pub server: Server,
     pub log: Log,
-    pub resp_strategy_conf: Vec<HashMap<String, HashMap<String, Value>>>,
+    pub resp_strategy_conf: HashMap<String, HashMap<String, Value>>,
 }
 
