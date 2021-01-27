@@ -1,6 +1,5 @@
 use config::{Config,File};
 use clap::{App,Arg,ArgMatches,SubCommand};
-use toml;
 use std::io::Write;
 mod server;
 mod response_strategy;
@@ -10,7 +9,7 @@ use logger::setup_logger;
 mod server_config;
 use server_config::ServerConfig;
 
-pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn get_app<'a, 'b>() -> App<'a, 'b> {
     App::new("chaos-ntpd")
@@ -40,7 +39,7 @@ fn start(args: &ArgMatches) -> std::io::Result<()> {
     match args.value_of("config") {
         Some(path) => config_rep = config_rep.merge(File::with_name(path).format(config::FileFormat::Toml))
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::NotFound, err))?.clone(),
-        None => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::NotFound, format!("no config file provided")))?
+        None => std::io::Result::Err(std::io::Error::new(std::io::ErrorKind::NotFound, "no config file provided".to_string()))?
     }
 
     //https://github.com/mehcode/config-rs/issues/57
@@ -67,11 +66,11 @@ fn start(args: &ArgMatches) -> std::io::Result<()> {
     //    return Err(std::io::Error::from(std::io::ErrorKind::NotFound))
     //}
 
-    let config = config_rep.try_into::<ServerConfig>().unwrap().clone();
+    let config = config_rep.try_into::<ServerConfig>().unwrap();
 
     let _guard = setup_logger(config.log.level);
 
-    let rs = inventory::iter::<&dyn ResponseStrategyCtor>.into_iter().find(|s| s.name() == config.server.resp_strategy).unwrap().new();
+    let rs = inventory::iter::<&dyn ResponseStrategyCtor>.into_iter().find(|s| s.name() == config.server.resp_strategy).unwrap().new_boxed();
 
     let mut server = server::Server {
         port: config.server.port,
@@ -91,9 +90,9 @@ fn start(args: &ArgMatches) -> std::io::Result<()> {
 fn generate_config(args: &ArgMatches) -> std::io::Result<()> {
     let path = args.value_of("path").unwrap();
     let mut file = std::fs::File::create(path)?;
-    let mut cfg = ServerConfig::default();
+    let cfg = ServerConfig::default();
     let data = toml::to_string_pretty(&cfg).unwrap();
-    file.write(data.as_bytes())?;
+    file.write_all(data.as_bytes())?;
     println!("Generated {}", path);
     Ok(())
 }
@@ -107,7 +106,7 @@ fn main() -> std::io::Result<()> {
         ("generate-config", Some(sub_args)) => generate_config(sub_args),
         _ => {
             app.print_help().map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-            println!("");
+            println!();
             Ok(())
         }
     }

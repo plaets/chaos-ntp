@@ -25,7 +25,7 @@ fn default_packet() -> ntp::types::Packet {
 }
 
 pub trait ResponseStrategyCtor {
-    fn new(&self) -> Box<dyn ResponseStrategy>;
+    fn new_boxed(&self) -> Box<dyn ResponseStrategy>;
     fn name(&self) -> &'static str;
 }
 
@@ -39,7 +39,7 @@ macro_rules! empty_ctor {
         paste::paste! {
             pub struct [<$name Ctor>];
             impl ResponseStrategyCtor for [<$name Ctor>] {
-                fn new(&self) -> Box<dyn ResponseStrategy> { 
+                fn new_boxed(&self) -> Box<dyn ResponseStrategy> { 
                     Box::new($name {})
                 }
 
@@ -79,7 +79,7 @@ impl SingleOffset {
 
 pub struct SingleOffsetCtor;
 impl ResponseStrategyCtor for SingleOffsetCtor {
-    fn new(&self) -> Box<dyn ResponseStrategy> { 
+    fn new_boxed(&self) -> Box<dyn ResponseStrategy> { 
         Box::new(SingleOffset {
             time_offset: 0,
             counter: 0,
