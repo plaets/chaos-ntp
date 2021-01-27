@@ -59,7 +59,7 @@ impl Server {
                                 error!("serializing error: {:?} {:?}", serialized.err(), &buf);
                             } 
                         })
-                        .map_err(|err| info!("parsing error: {} {:x?}", err, &buf[0..amt])).ok();
+                        .map_err(|err| info!("error from ip: {:}, error: {} data: {:x?}", addr, err, &buf[0..amt])).ok();
                 },
                 Err(err) => {
                     error!("error: {}", err);
